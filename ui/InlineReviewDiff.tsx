@@ -73,5 +73,5 @@ export function InlineReviewDiff({ patch, path, renderLine, onAdd }: { patch: st
       {onAdd ? <button type="button" className="gs-inline-add-button" aria-label={`Add comment on ${row.side} line ${row.line}`} onClick={() => onAdd(row.side!, row.line!)}>＋</button> : <span aria-hidden="true" />}
       <span className="gs-inline-number">{row.oldLine ?? ""}</span><span className="gs-inline-number">{row.newLine ?? ""}</span><code><span className="gs-inline-sign">{row.text[0]}</span>{highlighted?.key === key && row.tokenIndex !== undefined && highlighted.tokens[row.tokenIndex] ? highlighted.tokens[row.tokenIndex]!.map((token, tokenIndex) => <span key={tokenIndex} style={{ color: token.color }}>{token.content}</span>) : row.text.slice(1)}</code>
     </div>{row.kind === "context" && row.oldLine !== null ? renderLine?.("old", row.oldLine) : null}{renderLine?.(row.side, row.line)}
-  </div> : row.text ? <div key={index} className={`gs-inline-meta gs-inline-${row.kind}`}>{row.text}</div> : null)}</div>;
+  </div> : row.kind === "hunk" ? <div key={index} className="gs-inline-meta gs-inline-hunk">{row.text.replace(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@\s*/u, "Line $1 · ").replace(/ · $/u, "")}</div> : row.text.startsWith("\\") ? <div key={index} className="gs-inline-meta">{row.text}</div> : null)}</div>;
 }

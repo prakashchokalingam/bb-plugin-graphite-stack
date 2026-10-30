@@ -3,9 +3,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { DiffSnapshot } from "../lib/model";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { InlineError, Notice, Segmented } from "./primitives";
-import { draftKey, errorMessage, patchRanges, shortSha, validateRange } from "./model";
+import { draftKey, errorMessage, patchRanges, validateRange } from "./model";
 import type { GraphiteRpc } from "./rpc";
 import { useTextDraft } from "./rpc";
 
@@ -49,6 +48,7 @@ export function LineComposer({
   prAvailability,
   onSaved,
   initialAnchor,
+  onClose,
 }: {
   rpc: GraphiteRpc;
   environmentId: string;
@@ -64,6 +64,7 @@ export function LineComposer({
   prAvailability: string | null;
   onSaved: (destination: Destination) => void;
   initialAnchor?: { side: "old" | "new"; line: number };
+  onClose?: () => void;
 }) {
   const key = draftKey(["line-comment", repoKey, branch, path, ...(initialAnchor ? [initialAnchor.side, String(initialAnchor.line)] : [])]);
   const stored = useTextDraft(rpc, key);
@@ -78,6 +79,9 @@ export function LineComposer({
   useEffect(() => {
     if (hasSavedDraft) setOpen(true);
   }, [hasSavedDraft]);
+  useEffect(() => {
+    if (initialAnchor && open && stored.loaded) bodyRef.current?.focus();
+  }, [initialAnchor, open, stored.loaded]);
 
   const update = (patchValue: Partial<DraftValue>) => {
     if (!stored.loaded) return;
@@ -131,26 +135,8 @@ export function LineComposer({
     }
   };
 
-  if (!open) {
-    return (
-      <div className="gs-composer-closed">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            setOpen(true);
-            setTimeout(() => bodyRef.current?.focus(), 0);
-          }}
-        >
-          <Icon name="MessageSquarePlus" aria-hidden />
-          Comment on lines
-        </Button>
-        <span className="text-[11px] text-muted-foreground">
-          Use + beside a line to comment, or enter a line range here.
-        </span>
-      </div>
-    );
-  }
+  // Keep the legacy composer mounted so unfinished drafts can be restored.
+  if (!open) return null;
 
   return (
     <form
@@ -165,10 +151,12 @@ export function LineComposer({
         <h3 id={`${formId}-title`} className="text-xs font-semibold">
           New comment
         </h3>
-        <span className="font-mono text-[10px] text-muted-foreground">
-          {path} @ {shortSha(snapshot.headSha)}
+        <span className="text-[11px] text-muted-foreground">
+          {draft.side === "old" ? "Parent" : "Branch"} · {draft.start ? `L${draft.start}${draft.end && draft.end !== draft.start ? `–${draft.end}` : ""}` : "Select lines"} · {destination === "private" ? "Local draft" : "Pending PR comment"}
         </span>
       </div>
+      <details className="gs-composer-options" open={!initialAnchor || undefined}>
+        <summary>Line range and destination</summary>
       <div className="gs-anchor-row">
         <Segmented
           label="Diff side"
@@ -237,6 +225,7 @@ export function LineComposer({
           </span>
         </label>
       </fieldset>
+      </details>
       <label className="sr-only" htmlFor={`${formId}-body`}>
         Comment
       </label>
@@ -271,6 +260,7 @@ export function LineComposer({
           onClick={() => {
             void stored.flush();
             setOpen(false);
+            onClose?.();
           }}
         >
           Close

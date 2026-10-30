@@ -219,6 +219,8 @@ describe("stack review", () => {
     await waitFor(() => expect(calls(slot, "layerFiles")).toEqual([{ environmentId: ENV, branch: "feature/checkout-api" }]));
     const diff = await slot.findByLabelText("Inline comment diff");
     expect(diff.textContent).toContain("+b");
+    expect(diff.textContent).not.toContain("diff --git");
+    expect(diff.textContent).not.toContain("--- a/");
     expect(calls(slot, "filePatch")[0]).toMatchObject({ baseSha: SHA("a"), headSha: SHA("b"), path: "src/checkout-api.ts" });
     // Local stacks without a remote still work, and PR writes say why they are off.
     expect(slot.getByText(/no remote/u)).toBeTruthy();
@@ -365,7 +367,8 @@ describe("stack review", () => {
 describe("line comments", () => {
   async function openComposer(slot: ReturnType<typeof renderTab>) {
     await slot.findByLabelText("Inline comment diff");
-    fireEvent.click(slot.getByRole("button", { name: "Comment on lines" }));
+    fireEvent.click(slot.getByRole("button", { name: "Add comment on new line 2" }));
+    fireEvent.click(slot.getByText("Line range and destination"));
     const body = await slot.findByRole("textbox", { name: "Comment" });
     await waitFor(() => expect(body.hasAttribute("readonly")).toBe(false));
     return body;
@@ -411,9 +414,15 @@ describe("line comments", () => {
     const slot = renderTab();
     await slot.findByLabelText("Inline comment diff");
     fireEvent.click(slot.getByRole("button", { name: "Add comment on new line 2" }));
+    const form = slot.getByRole("form", { name: "New comment" });
+    expect(form.closest(".gs-inline-comments")).toBeTruthy();
+    expect(form.querySelector("details")?.open).toBe(false);
+    fireEvent.click(slot.getByText("Line range and destination"));
     const start = await slot.findByLabelText("Start line") as HTMLInputElement;
     expect(start.value).toBe("2");
-    expect(slot.getByRole("form", { name: "New comment" }).closest(".gs-inline-comments")).toBeTruthy();
+    fireEvent.click(slot.getByRole("button", { name: "Close" }));
+    fireEvent.click(slot.getByRole("button", { name: "Add comment on new line 2" }));
+    expect(slot.getByRole("form", { name: "New comment" })).toBeTruthy();
   });
 
   it("saves a private note anchored by SHA, path, side, and range", async () => {
@@ -470,7 +479,8 @@ describe("line comments", () => {
     const saved = deferred<{ value: string | null }>();
     const slot = renderTab({ rpc: handlers({ draftGet: () => saved.promise }) });
     await slot.findByLabelText("Inline comment diff");
-    fireEvent.click(slot.getByRole("button", { name: "Comment on lines" }));
+    fireEvent.click(slot.getByRole("button", { name: "Add comment on new line 2" }));
+    fireEvent.click(slot.getByText("Line range and destination"));
     const body = await slot.findByRole("textbox", { name: "Comment" });
     expect(body.hasAttribute("readonly")).toBe(true);
     await act(async () => {

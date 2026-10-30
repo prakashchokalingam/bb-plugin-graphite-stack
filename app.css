@@ -824,8 +824,10 @@
 .gs-inline-row { display:grid; grid-template-columns:30px 40px 40px minmax(max-content, 1fr); align-items:start; color:var(--foreground); background:var(--background); }
 .gs-inline-row code { white-space:pre; }
 .gs-inline-sign { color:var(--foreground); padding-right:0.5ch; }
-.gs-inline-add-button { color:var(--muted-foreground); cursor:pointer; background:transparent; border:0; }
-.gs-inline-add-button:hover,.gs-inline-add-button:focus-visible { color:var(--primary); }
+.gs-inline-add-button { color:var(--foreground); cursor:pointer; background:transparent; border:0; opacity:0; }
+.gs-inline-row:hover .gs-inline-add-button, .gs-inline-add-button:focus-visible { opacity:1; }
+.gs-inline-add-button:focus-visible { outline:2px solid var(--ring); outline-offset:-2px; }
+@media (hover: none) { .gs-inline-add-button { opacity:1; } }
 .gs-inline-number { text-align:right; padding-right:8px; color:var(--foreground); user-select:none; }
 /* Diff tokens can be bright accents. Tint the theme background instead of
    using the accent as a solid surface behind the theme foreground. */
@@ -836,3 +838,8 @@
 .gs-inline-diff[data-code-mode="dark"] .gs-inline-row.gs-inline-remove { background:color-mix(in srgb, var(--background) 40%, #4a1117 60%); }
 .gs-inline-meta { padding:2px 12px; white-space:pre; color:var(--muted-foreground); }
 .gs-inline-comments:not(:empty) { margin:8px 12px 8px 110px; min-width:260px; font-family:var(--font-sans, sans-serif); }
+
+.gs-composer-options { color:var(--muted-foreground); font-size:11px; }
+.gs-composer-options summary { cursor:pointer; width:fit-content; }
+.gs-composer-options[open] summary { margin-bottom:8px; }
+.gs-inline-hunk { background:var(--surface-raised, var(--background)); font-size:11px; }

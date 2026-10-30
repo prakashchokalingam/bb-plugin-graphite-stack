@@ -808,7 +808,7 @@ function LayerPane({
                           onAdd: (side, line) => setInlineAnchor({ side, line }),
                           renderLine: (side, line) => <div className="gs-inline-comments">
                             <NoteList rpc={rpc} environmentId={env} notes={fileNotes.filter((note) => note.side === side && note.endLine === line)} currentHeadSha={snapshot.headSha} onChanged={notes.reload} />
-                            {inlineAnchor?.side === side && inlineAnchor.line === line ? <LineComposer key={`${layer.name}:${selectedFile.path}:${side}:${line}`} rpc={rpc} environmentId={env} repoKey={view.repoKey!} branch={layer.name} path={selectedFile.path} snapshot={snapshot} patch={patchText} noteThreadId={noteThreadId} prAvailability={prUnavailable} initialAnchor={inlineAnchor} onSaved={(destination) => { setInlineAnchor(null); destination === "private" ? notes.reload() : prThreads.reload(); }} /> : null}
+                            {inlineAnchor?.side === side && inlineAnchor.line === line ? <LineComposer key={`${layer.name}:${selectedFile.path}:${side}:${line}`} rpc={rpc} environmentId={env} repoKey={view.repoKey!} branch={layer.name} path={selectedFile.path} snapshot={snapshot} patch={patchText} noteThreadId={noteThreadId} prAvailability={prUnavailable} initialAnchor={inlineAnchor} onClose={() => setInlineAnchor(null)} onSaved={(destination) => { setInlineAnchor(null); destination === "private" ? notes.reload() : prThreads.reload(); }} /> : null}
                           </div>,
                         } : undefined}
                       />
