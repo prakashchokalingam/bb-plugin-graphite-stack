@@ -96,12 +96,12 @@ export function ThreadLinks({
         <p className="text-xs text-muted-foreground">No primary thread is linked to this branch.</p>
       )}
       {candidates.length > 0 ? (
-        <div className="mt-2">
-          <div className="pb-1 text-[11px] text-muted-foreground">Existing threads on this branch</div>
+        <details className="mt-2 gs-thread-picker">
+          <summary>Choose existing thread ({candidates.length})</summary>
           <ul className="flex flex-col gap-1">
             {candidates.map((thread) => (
               <li key={thread.id} className="gs-link-row">
-                <span className="min-w-0 flex-1 truncate text-xs" title={thread.title}>
+                <span className="min-w-0 flex-1 break-words text-xs" title={thread.title}>
                   {thread.title}
                 </span>
                 <Chip tone={thread.status === "idle" ? "muted" : "brand"}>{thread.status}</Chip>
@@ -119,7 +119,7 @@ export function ThreadLinks({
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       ) : null}
       <div className="mt-2 flex flex-wrap gap-2">
         {canLinkCurrent ? (

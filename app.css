@@ -666,6 +666,16 @@
   gap: 6px;
   min-width: 0;
 }
+.gs-thread-picker summary {
+  cursor: pointer;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.gs-thread-picker ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
 .gs-untracked {
   margin: 10px 4px 0;
   font-size: 11px;
