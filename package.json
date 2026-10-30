@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-graphite-stack",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "engines": {
     "bb": ">=0.48",
@@ -11,7 +11,9 @@
     "description": "Review local Graphite stacks with parent-relative diffs, private line notes, optional GitHub PR reviews, and explicit gt actions.",
     "branding": {
       "icon": "./assets/graphite.svg",
-      "experimental_icons": { "stack": "./assets/graphite.svg" }
+      "experimental_icons": {
+        "stack": "./assets/graphite.svg"
+      }
     },
     "server": "./server.ts",
     "app": "./app.tsx",
