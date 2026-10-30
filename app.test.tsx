@@ -386,6 +386,17 @@ describe("line comments", () => {
     await waitFor(() => expect(calls(slot, "notesSend")).toEqual([{ environmentId: ENV, branch: "feature/checkout-api", threadId: "thr_self", noteIds: ["note_1"] }]));
   });
 
+  it("keeps full-file context in the same inline diff", async () => {
+    const slot = renderTab({ rpc: handlers({ fileSides: () => ({ status: "ok", old: { path: "src/checkout-api.ts", content: "a\nd\ne\nunchanged\n" }, new: { path: "src/checkout-api.ts", content: "a\nb\nc\nd\ne\nunchanged\n" }, message: null }) }) });
+    const diff = await slot.findByLabelText("Inline comment diff");
+    expect(within(diff).queryByText(/unchanged/u)).toBeNull();
+    expect(slot.queryByRole("button", { name: "Native diff" })).toBeNull();
+    expect(slot.queryByRole("group", { name: "Diff layout" })).toBeNull();
+    fireEvent.click(slot.getByRole("checkbox", { name: "Full file" }));
+    await waitFor(() => expect(within(diff).getByText(/unchanged/u)).toBeTruthy());
+    expect(slot.getByRole("button", { name: "Add comment on new line 6" })).toBeTruthy();
+  });
+
   it("uses the active code theme for syntax in the inline diff", async () => {
     const slot = renderTab({
       codeTheme: { mode: "dark", name: "test-code", theme: { name: "test-code", type: "dark", fg: "#eeeeee", bg: "#181818", colors: {}, tokenColors: [{ scope: ["keyword", "storage.type", "storage.modifier"], settings: { foreground: "#ff6688" } }, { scope: "constant.numeric", settings: { foreground: "#88ccff" } }] } },

@@ -1,6 +1,5 @@
-// Accessible line-anchor controls beside the native diff. The native diff
-// exposes no line-selection callback, so the reviewer types the side and
-// line range here. Every anchor carries the diff's base and head SHAs.
+// Accessible line-anchor controls for the inline diff. Every anchor carries
+// the diff's base and head SHAs.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { DiffSnapshot } from "../lib/model";
 import { Button } from "@/components/ui/button";
@@ -147,7 +146,7 @@ export function LineComposer({
           Comment on lines
         </Button>
         <span className="text-[11px] text-muted-foreground">
-          Select lines in the diff to copy or Add to chat. Enter the line numbers here to keep a review comment.
+          Use + beside a line to comment, or enter a line range here.
         </span>
       </div>
     );

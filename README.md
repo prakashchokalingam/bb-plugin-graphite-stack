@@ -14,9 +14,9 @@ enrichment.
   Graphite repository in it, then open any stack.
 - **Layer review without a checkout.** Select a layer to see only its changes
   against its Graphite parent (merge base of parent and branch, pinned to
-  commit SHAs). Files load lazily, one patch at a time, in an inline review diff or BB's native
-  `experimental_Diff` (unified or split, expand context when both file sides
-  are small text). Mark files viewed; the mark resets when the file changes.
+  commit SHAs). Files load lazily, one patch at a time, in the inline review
+  diff. Expand full-file context for small text files. Mark files viewed; the
+  mark resets when the file changes.
 - **Uncommitted changes** of a worktree show in their own section, apart from
   committed layer changes.
 - **Local line comments** on any layer, with replies, edit, local resolve,
@@ -178,8 +178,7 @@ Both commands only read.
 
 - Inline review uses a line button and a line-range form. It highlights
   JavaScript, TypeScript, JSX, TSX, JSON, and Python with BB's active code
-  theme. Other file types use plain text. The native diff remains available,
-  but its selection does not open the comment composer.
+  theme. Other file types use plain text.
 - Thread sends start a turn or queue behind an active thread. When a send
   outcome is uncertain, the plugin blocks a duplicate send and offers a
   thread search. A missing search result does not prove delivery failed.

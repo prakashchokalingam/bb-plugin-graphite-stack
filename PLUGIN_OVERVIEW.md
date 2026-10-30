@@ -4,7 +4,7 @@ them.
 ## What you get
 
 - A **Graphite** tab on each thread with the stack rail, each layer's true
-  Graphite parent, and only that layer's changes in BB's native diff.
+  Graphite parent, and only that layer's changes in the inline review diff.
 - A **Graphite stacks** page that lists every Graphite repository in a project.
 - Local inline comments with resolve, outdated detection, and an optional grouped send to a linked BB thread.
 - Optional GitHub PR review: replies, resolve, and pending reviews submitted as

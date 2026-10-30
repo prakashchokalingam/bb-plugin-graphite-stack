@@ -1,9 +1,8 @@
-// One lazily loaded file diff, drawn with BB's native diff renderer.
-import { useEffect, useState } from "react";
+// One lazily loaded inline diff with optional full-file context.
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { InlineReviewDiff } from "./InlineReviewDiff";
-import { experimental_Diff as Diff } from "@get-bb/plugin-sdk/app";
-import type { DiffViewMode } from "@get-bb/plugin-sdk/app";
+import { createTwoFilesPatch } from "diff";
 import type { FileSidesResult, PatchResult } from "../lib/model";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -21,7 +20,6 @@ export interface FileDiffProps {
   kind: FileKind;
   additions: number | null;
   deletions: number | null;
-  view: DiffViewMode;
   loadPatch: () => Promise<PatchResult>;
   /** Omit when full-file context is not available (uncommitted files). */
   loadSides?: () => Promise<FileSidesResult>;
@@ -43,9 +41,8 @@ const KIND_LABEL: Record<FileKind, string | null> = {
 };
 
 export function FileDiff(props: FileDiffProps) {
-  const { resourceKey, path, oldPath, kind, view, loadPatch, loadSides, viewed, onPatch } = props;
+  const { resourceKey, path, oldPath, kind, loadPatch, loadSides, viewed, onPatch } = props;
   const [fullContext, setFullContext] = useState(false);
-  const [inlineMode, setInlineMode] = useState(true);
   const [showLarge, setShowLarge] = useState(false);
   const patch = useResource(`${resourceKey}#patch`, loadPatch, { version: props.version ?? 0 });
   const loadedPatch = patch.data === undefined || patch.data.binary ? null : patch.data.patch;
@@ -53,6 +50,10 @@ export function FileDiff(props: FileDiffProps) {
     onPatch?.(loadedPatch);
   }, [loadedPatch, onPatch]);
   const sides = useResource(fullContext && loadSides ? `${resourceKey}#sides` : null, () => loadSides!());
+  const fullPatch = useMemo(() => {
+    if (!fullContext || sides.data?.status !== "ok") return null;
+    return createTwoFilesPatch(oldPath ?? path, path, sides.data.old?.content ?? "", sides.data.new?.content ?? "", undefined, undefined, { context: Number.MAX_SAFE_INTEGER });
+  }, [fullContext, sides.data, oldPath, path]);
   const label = KIND_LABEL[kind];
   const largePatch = patch.data !== undefined && patch.data.bytes > 400_000;
 
@@ -91,24 +92,12 @@ export function FileDiff(props: FileDiffProps) {
       </div>
     );
   } else {
-    const contents =
-      fullContext && sides.data?.status === "ok"
-        ? {
-            old: sides.data.old ?? { path: oldPath ?? path, content: "" },
-            new: sides.data.new ?? { path, content: "" },
-          }
-        : undefined;
     body = (
       <>
         {patch.data.truncated ? (
           <Notice>The diff is larger than the read limit. BB shows only the first part.</Notice>
         ) : null}
-        {props.inlineReview && inlineMode && !fullContext ? <InlineReviewDiff patch={patch.data.patch} path={path} renderLine={props.inlineReview.renderLine} onAdd={props.inlineReview.onAdd} /> : <Diff
-          patch={patch.data.patch}
-          path={path}
-          view={view}
-          {...(contents ? { experimental_fullFileContents: contents } : {})}
-        />}
+        <InlineReviewDiff patch={fullPatch ?? patch.data.patch} path={path} renderLine={props.inlineReview?.renderLine} onAdd={props.inlineReview?.onAdd} />
       </>
     );
   }
@@ -133,7 +122,6 @@ export function FileDiff(props: FileDiffProps) {
             <span className="gs-add">+{props.additions ?? 0}</span> <span className="gs-del">−{props.deletions ?? 0}</span>
           </span>
         ) : null}
-        {props.inlineReview ? <Button size="sm" variant="ghost" onClick={() => { setFullContext(false); setInlineMode((value) => !value); }}>{inlineMode ? "Native diff" : "Inline comments"}</Button> : null}
         {loadSides && kind !== "binary" ? (
           <label className="gs-check">
             <input type="checkbox" checked={fullContext} onChange={(event) => setFullContext(event.target.checked)} />

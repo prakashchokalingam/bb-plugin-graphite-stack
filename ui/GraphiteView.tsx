@@ -1,9 +1,8 @@
 // The Graphite review workspace for one BB environment: stack rail, layer
-// header, changed files, native diff, comments, and stack actions.
+// header, changed files, inline diff, comments, and stack actions.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { UrlLink } from "@get-bb/plugin-sdk/app";
-import type { DiffViewMode } from "@get-bb/plugin-sdk/app";
 import type { LayerView, OperationRequest, OperationResult, StackView } from "../contract";
 import type { ChangedFile, UncommittedFile } from "../lib/model";
 import { Button } from "@/components/ui/button";
@@ -516,7 +515,6 @@ function LayerPane({
   const env = view.environmentId;
   const pr = prMap[layer.name] ?? null;
   const [tab, setTab] = useState<Tab>("changes");
-  const [diffView, setDiffView] = useState<DiffViewMode>("unified");
   const [selection, setSelection] = useState<FileSelection>(null);
   const [inlineAnchor, setInlineAnchor] = useState<{ side: "old" | "new"; line: number } | null>(null);
   const [hideResolved, setHideResolved] = useState(false);
@@ -732,15 +730,6 @@ function LayerPane({
                   </span>
                 ) : null}
                 <span className="flex-1" />
-                <Segmented
-                  label="Diff layout"
-                  value={diffView}
-                  options={[
-                    { value: "unified", label: "Unified" },
-                    { value: "split", label: "Split" },
-                  ]}
-                  onChange={setDiffView}
-                />
               </div>
               {snapshot?.diverged ? (
                 <div className="gs-pad">
@@ -795,7 +784,6 @@ function LayerPane({
                         kind={fileKind(selectedFile)}
                         additions={selectedFile.additions}
                         deletions={selectedFile.deletions}
-                        view={diffView}
                         loadPatch={() =>
                           rpc.call("filePatch", {
                             environmentId: env,
@@ -863,7 +851,6 @@ function LayerPane({
                         kind={selectedUncommitted.conflicted ? "conflict" : selectedUncommitted.untracked ? "added" : "modified"}
                         additions={null}
                         deletions={null}
-                        view={diffView}
                         loadPatch={() =>
                           rpc.call("uncommittedPatch", {
                             environmentId: env,
