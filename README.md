@@ -176,8 +176,10 @@ Both commands only read.
 
 ## Known limits
 
-- Inline review uses a line button and a line-range form. The native diff
-  remains available, but its selection does not open the comment composer.
+- Inline review uses a line button and a line-range form. It highlights
+  JavaScript, TypeScript, JSX, TSX, JSON, and Python with BB's active code
+  theme. Other file types use plain text. The native diff remains available,
+  but its selection does not open the comment composer.
 - Thread sends start a turn or queue behind an active thread. When a send
   outcome is uncertain, the plugin blocks a duplicate send and offers a
   thread search. A missing search result does not prove delivery failed.

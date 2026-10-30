@@ -103,7 +103,7 @@ export function FileDiff(props: FileDiffProps) {
         {patch.data.truncated ? (
           <Notice>The diff is larger than the read limit. BB shows only the first part.</Notice>
         ) : null}
-        {props.inlineReview && inlineMode && !fullContext ? <InlineReviewDiff patch={patch.data.patch} renderLine={props.inlineReview.renderLine} onAdd={props.inlineReview.onAdd} /> : <Diff
+        {props.inlineReview && inlineMode && !fullContext ? <InlineReviewDiff patch={patch.data.patch} path={path} renderLine={props.inlineReview.renderLine} onAdd={props.inlineReview.onAdd} /> : <Diff
           patch={patch.data.patch}
           path={path}
           view={view}

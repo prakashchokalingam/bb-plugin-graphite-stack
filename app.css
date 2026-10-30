@@ -823,12 +823,16 @@
 .gs-inline-diff { overflow-x:auto; font:12px/1.6 var(--font-mono, monospace); }
 .gs-inline-row { display:grid; grid-template-columns:30px 40px 40px minmax(max-content, 1fr); align-items:start; color:var(--foreground); background:var(--background); }
 .gs-inline-row code { white-space:pre; }
+.gs-inline-sign { color:var(--foreground); padding-right:0.5ch; }
 .gs-inline-add-button { color:var(--muted-foreground); cursor:pointer; background:transparent; border:0; }
 .gs-inline-add-button:hover,.gs-inline-add-button:focus-visible { color:var(--primary); }
 .gs-inline-number { text-align:right; padding-right:8px; color:var(--foreground); user-select:none; }
 /* Diff tokens can be bright accents. Tint the theme background instead of
    using the accent as a solid surface behind the theme foreground. */
-.gs-inline-row.gs-inline-add { background:color-mix(in srgb, var(--background) 92%, var(--diff-added, var(--success)) 8%); }
-.gs-inline-row.gs-inline-remove { background:color-mix(in srgb, var(--background) 92%, var(--diff-removed, var(--destructive)) 8%); }
+.gs-inline-row.gs-inline-add { background:color-mix(in srgb, var(--background) 99%, var(--diff-added, var(--success)) 1%); }
+.gs-inline-row.gs-inline-remove { background:color-mix(in srgb, var(--background) 99%, var(--diff-removed, var(--destructive)) 1%); }
+/* Graphite-style dark change surfaces keep syntax colors legible. */
+.gs-inline-diff[data-code-mode="dark"] .gs-inline-row.gs-inline-add { background:color-mix(in srgb, var(--background) 40%, #003d20 60%); }
+.gs-inline-diff[data-code-mode="dark"] .gs-inline-row.gs-inline-remove { background:color-mix(in srgb, var(--background) 40%, #4a1117 60%); }
 .gs-inline-meta { padding:2px 12px; white-space:pre; color:var(--muted-foreground); }
 .gs-inline-comments:not(:empty) { margin:8px 12px 8px 110px; min-width:260px; font-family:var(--font-sans, sans-serif); }

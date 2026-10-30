@@ -193,7 +193,7 @@ describe("gh helpers", () => {
 describe("public SDK only", () => {
   it("imports only public SDK entry points", async () => {
     // Third-party UI, test, and database packages are declared dependencies.
-    const allow = [/^react(?:-dom)?(?:\/.*)?$/u, /^@radix-ui\//u, /^@testing-library\//u, /^(?:clsx|tailwind-merge|class-variance-authority|sonner|vaul|better-sqlite3)$/u, /^vitest\/config$/u, /^@\//u];
+    const allow = [/^react(?:-dom)?(?:\/.*)?$/u, /^@radix-ui\//u, /^@testing-library\//u, /^(?:clsx|tailwind-merge|class-variance-authority|sonner|vaul|better-sqlite3)$/u, /^vitest\/config$/u, /^shiki\//u, /^@shikijs\/langs\//u, /^@\//u];
     const result = await experimental_scanPublicSdkOnly(path.resolve(import.meta.dirname, ".."), { allow });
     expect(result.violations).toEqual([]);
     expect(result.privateDependencies).toEqual([]);

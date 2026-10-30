@@ -386,6 +386,16 @@ describe("line comments", () => {
     await waitFor(() => expect(calls(slot, "notesSend")).toEqual([{ environmentId: ENV, branch: "feature/checkout-api", threadId: "thr_self", noteIds: ["note_1"] }]));
   });
 
+  it("uses the active code theme for syntax in the inline diff", async () => {
+    const slot = renderTab({
+      codeTheme: { mode: "dark", name: "test-code", theme: { name: "test-code", type: "dark", fg: "#eeeeee", bg: "#181818", colors: {}, tokenColors: [{ scope: ["keyword", "storage.type", "storage.modifier"], settings: { foreground: "#ff6688" } }, { scope: "constant.numeric", settings: { foreground: "#88ccff" } }] } },
+      rpc: handlers({ filePatch: () => ({ patch: "diff --git a/test.ts b/test.ts\n--- a/test.ts\n+++ b/test.ts\n@@ -1 +1 @@\n-old\n+const answer = 42;\n", bytes: 100, truncated: false, binary: false }) }),
+    });
+    const diff = await slot.findByLabelText("Inline comment diff");
+    expect(diff.getAttribute("data-code-mode")).toBe("dark");
+    await waitFor(() => expect(within(diff).getByText("const").getAttribute("style")).toContain("color:"));
+  });
+
   it("opens the composer directly beneath a selected diff line", async () => {
     const slot = renderTab();
     await slot.findByLabelText("Inline comment diff");
