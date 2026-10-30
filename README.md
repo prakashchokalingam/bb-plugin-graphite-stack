@@ -77,7 +77,7 @@ with their own configuration and authentication. It stores no tokens.
 
 ## Install
 
-The [BB Community marketplace submission](https://app.graphite.com/github/pr/get-bb/marketplace/755) is under review.
+The [BB Community marketplace submission](https://app.graphite.com/github/pr/get-bb/marketplace/755) is merged.
 
 Install directly from this repository:
 
