@@ -1,9 +1,25 @@
 # Graphite Stack for BB
 
+Review a Graphite stack without leaving your BB thread.
+
 Review and operate **local** Graphite stacks inside BB. The plugin reads the
 stack that `gt` tracks on each environment's machine. It needs no pull request,
 no GitHub authentication, and no Git remote. PR data from GitHub is optional
 enrichment.
+
+![Illustrative Graphite Stack review with a fictional order-total branch, inline diff, and local comment](docs/screenshots/review-mock.png)
+
+<sub>Illustration with fictional project data. The interface follows your BB theme.</sub>
+
+## Why this exists
+
+Stacked changes often span several branches and worktrees. Graphite Stack brings
+the branch graph, parent-relative changes, and review comments into BB so you
+can follow the work from the same place as your agent threads.
+
+Review a branch locally first. Keep comments as local drafts, send selected
+drafts to a linked BB thread, or use the separate GitHub PR review flow when a
+pull request exists.
 
 ## What you get
 
