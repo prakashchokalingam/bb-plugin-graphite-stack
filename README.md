@@ -7,7 +7,7 @@ stack that `gt` tracks on each environment's machine. It needs no pull request,
 no GitHub authentication, and no Git remote. PR data from GitHub is optional
 enrichment.
 
-![Graphite Stack review with a fictional checkout branch, inline diff, and local comment](docs/screenshots/review.jpg)
+![A fictional BB thread beside the Graphite Stack file tree, inline diff, and local comment](docs/screenshots/review.jpg)
 
 <sub>BB review view with fictional project data. The interface follows your BB theme.</sub>
 
@@ -17,7 +17,7 @@ Open the **Graphite** tab in a thread's right panel to follow the stack and revi
 changes beside the conversation. The panel uses the thread's environment, so
 you can see the branches and local comments for that work.
 
-![A BB thread beside the Graphite Stack review panel, using a fictional verification repository](docs/screenshots/thread-review.jpg)
+![A BB thread beside the open Graphite Stack selector, using a fictional verification repository](docs/screenshots/thread-review.jpg)
 
 <sub>Real BB thread and Graphite panel with a fictional verification repository. Additional thread-list entries are simulated.</sub>
 
