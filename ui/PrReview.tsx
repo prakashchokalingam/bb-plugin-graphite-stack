@@ -299,10 +299,13 @@ export function FinishReview({
 
   const remove = async (commentId: string) => {
     setBusy(`remove:${commentId}`);
+    const previous = pending;
+    if (previous) onPending({ ...previous, comments: previous.comments.filter((comment) => comment.id !== commentId) });
     try {
       onPending(await rpc.call("pendingRemove", { environmentId, branch, commentId }));
       onChanged();
     } catch (cause) {
+      onPending(previous);
       setResult({ tone: "danger", text: errorMessage(cause) });
     } finally {
       setBusy(null);

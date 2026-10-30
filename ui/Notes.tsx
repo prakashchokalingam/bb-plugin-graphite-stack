@@ -56,6 +56,7 @@ function NoteCard({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState(note.body);
 
@@ -83,6 +84,7 @@ function NoteCard({
   };
 
   const fromOtherRevision = currentHeadSha !== null && note.headSha !== currentHeadSha;
+  if (deleting) return null;
   return (
     <article className={note.resolved ? "gs-comment gs-comment-resolved" : "gs-comment"} aria-label={`Comment on ${anchorLabel(note)}`}>
       <header className="gs-comment-head">
@@ -161,7 +163,7 @@ function NoteCard({
               size="sm"
               variant="destructive"
               disabled={busy !== null}
-              onClick={() => void act("delete", () => rpc.call("noteDelete", { environmentId, noteId: note.id }), "The note no longer exists.")}
+              onClick={() => { setDeleting(true); void act("delete", () => rpc.call("noteDelete", { environmentId, noteId: note.id }), "The note no longer exists.").then((ok) => { if (!ok) { setDeleting(false); setConfirmDelete(false); } }); }}
             >
               Delete
             </Button>

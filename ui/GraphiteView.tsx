@@ -620,6 +620,17 @@ function LayerPane({
     notes.reload();
     prThreads.reload();
   };
+  const commentSaved = (destination: "private" | "pr", result: import("../contract").Note | import("../contract").PendingReview) => {
+    if (destination === "private" && "repoKey" in result && notes.data) {
+      notes.set({ ...notes.data, notes: [...notes.data.notes.filter((note) => note.id !== result.id), result] });
+      notes.reload();
+    } else if (destination === "pr" && "comments" in result && prThreads.data) {
+      prThreads.set({ ...prThreads.data, pending: result });
+      prThreads.reload();
+    } else {
+      destination === "private" ? notes.reload() : prThreads.reload();
+    }
+  };
 
   const title = pr?.title ?? layer.commits[0]?.subject ?? layer.name;
   const prState = pr ? prStateLabel(pr) : null;
@@ -808,7 +819,7 @@ function LayerPane({
                           onAdd: (side, line) => setInlineAnchor({ side, line }),
                           renderLine: (side, line) => <div className="gs-inline-comments">
                             <NoteList rpc={rpc} environmentId={env} notes={fileNotes.filter((note) => note.side === side && note.endLine === line)} currentHeadSha={snapshot.headSha} onChanged={notes.reload} />
-                            {inlineAnchor?.side === side && inlineAnchor.line === line ? <LineComposer key={`${layer.name}:${selectedFile.path}:${side}:${line}`} rpc={rpc} environmentId={env} repoKey={view.repoKey!} branch={layer.name} path={selectedFile.path} snapshot={snapshot} patch={patchText} noteThreadId={noteThreadId} prAvailability={prUnavailable} initialAnchor={inlineAnchor} onClose={() => setInlineAnchor(null)} onSaved={(destination) => { setInlineAnchor(null); destination === "private" ? notes.reload() : prThreads.reload(); }} /> : null}
+                            {inlineAnchor?.side === side && inlineAnchor.line === line ? <LineComposer key={`${layer.name}:${selectedFile.path}:${side}:${line}`} rpc={rpc} environmentId={env} repoKey={view.repoKey!} branch={layer.name} path={selectedFile.path} snapshot={snapshot} patch={patchText} noteThreadId={noteThreadId} prAvailability={prUnavailable} initialAnchor={inlineAnchor} onClose={() => setInlineAnchor(null)} onSaved={(destination, result) => { commentSaved(destination, result); setInlineAnchor(null); }} /> : null}
                           </div>,
                         } : undefined}
                       />
@@ -824,7 +835,7 @@ function LayerPane({
                           patch={patchText}
                           noteThreadId={noteThreadId}
                           prAvailability={prUnavailable}
-                          onSaved={(destination) => (destination === "private" ? notes.reload() : prThreads.reload())}
+                          onSaved={commentSaved}
                         />
                       ) : null}
                       {fileNotes.length > 0 || fileThreads.length > 0 ? (

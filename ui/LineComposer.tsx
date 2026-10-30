@@ -2,6 +2,7 @@
 // the diff's base and head SHAs.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { DiffSnapshot } from "../lib/model";
+import type { Note, PendingReview } from "../contract";
 import { Button } from "@/components/ui/button";
 import { InlineError, Notice, Segmented } from "./primitives";
 import { draftKey, errorMessage, patchRanges, validateRange } from "./model";
@@ -62,7 +63,7 @@ export function LineComposer({
   noteThreadId: string | null;
   /** Null when PR comments are available, otherwise the reason. */
   prAvailability: string | null;
-  onSaved: (destination: Destination) => void;
+  onSaved: (destination: Destination, result: Note | PendingReview) => void;
   initialAnchor?: { side: "old" | "new"; line: number };
   onClose?: () => void;
 }) {
@@ -117,16 +118,16 @@ export function LineComposer({
       headSha: snapshot.headSha,
     };
     try {
-      if (destination === "private") {
-        await rpc.call("noteCreate", { environmentId, branch, anchor, body: draft.body, threadId: noteThreadId });
-      } else {
-        await rpc.call("pendingAdd", { environmentId, branch, anchor, body: draft.body });
-      }
+      const result = destination === "private"
+        ? await rpc.call("noteCreate", { environmentId, branch, anchor, body: draft.body, threadId: noteThreadId })
+        : await rpc.call("pendingAdd", { environmentId, branch, anchor, body: draft.body });
       // Drop queued draft saves first, so that none restores the text.
-      await stored.clear();
+      // The comment already exists once the RPC succeeds. A draft cleanup
+      // failure must not invite the user to submit the same comment again.
+      await stored.clear().catch(() => undefined);
       setTouched(false);
       setOpen(false);
-      onSaved(destination);
+      onSaved(destination, result);
     } catch (cause) {
       // Keep the text. Do not retry by itself.
       setError(errorMessage(cause));
@@ -137,6 +138,8 @@ export function LineComposer({
 
   // Keep the legacy composer mounted so unfinished drafts can be restored.
   if (!open) return null;
+
+  if (submitting) return <article className="gs-comment" aria-live="polite"><header className="gs-comment-head">{destination === "private" ? "Local draft" : "Pending PR comment"} · Saving…</header><p className="gs-comment-body">{draft.body}</p></article>;
 
   return (
     <form
