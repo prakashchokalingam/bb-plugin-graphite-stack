@@ -135,6 +135,7 @@ function handlers(overrides: Partial<Handlers> = {}): Handlers {
 }
 
 function renderTab(options: RenderSlotOptions<Contract> & { props?: Partial<ExperimentalThreadTabProps> } = {}) {
+  if (window.localStorage.getItem("graphite-stack:rail:thread") === null) window.localStorage.setItem("graphite-stack:rail:thread", "open");
   const { props, ...rest } = options;
   return renderSlot<ExperimentalThreadTabProps, Contract>(
     { component: ThreadGraphiteTab },
@@ -201,6 +202,29 @@ describe("thread tab states", () => {
 });
 
 describe("stack review", () => {
+  it("opens the compact stack and closes it after selecting a branch", async () => {
+    window.localStorage.setItem("graphite-stack:rail:thread", "closed");
+    const slot = renderTab();
+    const toggle = await slot.findByRole("button", { name: /^Stack ·/u });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(toggle);
+    const rail = slot.getByRole("list", { name: "Graphite stack" });
+    fireEvent.click(within(rail).getByRole("button", { name: /feature\/order-model/u }));
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(window.localStorage.getItem("graphite-stack:rail:thread")).toBe("closed");
+  });
+
+  it("groups files by folder and searches their full paths", async () => {
+    const slot = renderTab({ rpc: handlers({ layerFiles: ({ branch }) => ({ snapshot: snapshotFor(branch, "feature/order-model"), files: [changed("packages/db/a/index.ts"), changed("packages/db/b/index.ts")], truncated: false, error: null, viewed: [] }) }) });
+    await slot.findByText("packages/db");
+    expect(slot.getByText("a")).toBeTruthy();
+    expect(slot.getByText("b")).toBeTruthy();
+    expect(slot.getAllByRole("button", { name: /index\.ts/u })).toHaveLength(2);
+    fireEvent.change(slot.getByRole("searchbox", { name: "Search changed files" }), { target: { value: "db/b/" } });
+    expect(slot.getAllByRole("button", { name: /index\.ts/u })).toHaveLength(1);
+    expect(slot.getByRole("button", { name: /index\.ts/u }).getAttribute("title")).toBe("packages/db/b/index.ts");
+  });
+
   it("shows the Graphite topology and the current layer's parent-relative diff", async () => {
     const slot = renderTab();
     const rail = await slot.findByRole("list", { name: "Graphite stack" });
@@ -261,6 +285,7 @@ describe("stack review", () => {
     fireEvent.click(slot.getByRole("button", { name: /^All/u }));
     expect(within(rail).getAllByRole("button").length).toBe(6);
     fireEvent.click(within(rail).getByRole("button", { name: /feature\/other-top/u }));
+    fireEvent.click(slot.getByRole("button", { name: /^Stack ·/u }));
     await waitFor(() =>
       expect(within(rail).getAllByRole("button").map((button) => button.getAttribute("data-layer"))).toEqual([
         "feature/other-top",

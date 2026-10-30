@@ -148,6 +148,16 @@ export function GraphiteView({
   };
   const stack = useResource(`stack:${environmentId}`, () => rpc.call("stack", { environmentId, detailBranches: [] }), { enabled: visible, version });
   const [selected, setSelected] = useState<string | null>(null);
+  const [stackOpen, setStackOpen] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem(`graphite-stack:rail:${currentThreadId ? "thread" : "page"}`);
+      return saved === null ? !currentThreadId : saved === "open";
+    } catch { return !currentThreadId; }
+  });
+  const toggleStack = () => setStackOpen((open) => {
+    try { window.localStorage.setItem(`graphite-stack:rail:${currentThreadId ? "thread" : "page"}`, open ? "closed" : "open"); } catch { /* Storage is optional. */ }
+    return !open;
+  });
   const [operation, setOperation] = useState<OperationRequest | null>(null);
   const [scope, setScope] = useState<Scope>("stack");
   const [anchor, setAnchor] = useState<string | null>(null);
@@ -303,6 +313,10 @@ export function GraphiteView({
   };
   const selectLayer = (name: string) => {
     setSelected(name);
+    if (currentThreadId) {
+      setStackOpen(false);
+      try { window.localStorage.setItem("graphite-stack:rail:thread", "closed"); } catch { /* Storage is optional. */ }
+    }
     const target = byName.get(name) ?? null;
     if (activeScope === "all" && target && !target.trunk) {
       setAnchor(name);
@@ -319,6 +333,10 @@ export function GraphiteView({
       view={view}
       toolbar={
         <>
+          <Button size="sm" variant="outline" aria-expanded={stackOpen} aria-controls="gs-stack-rail" onClick={toggleStack}>
+            <Icon name="Layers" aria-hidden /> Stack · {scoped.length || view.layers.length}
+          </Button>
+          {layer ? <span className="gs-stack-current" title={`${layer.name}${layer.parent ? ` ← ${layer.parent}` : ""}`}>{layer.name}{layer.parent ? ` ← ${layer.parent}` : ""}</span> : null}
           {toolbar}
           {stack.loading ? <Spinner label="Refreshing" /> : null}
           {view.busyRepo ? <Chip tone="warning">Operation running</Chip> : null}
@@ -336,8 +354,8 @@ export function GraphiteView({
         </>
       }
     >
-      <div className="gs-layout">
-        <aside className="gs-sidebar" aria-label="Stack">
+      <div className={cn("gs-layout", !stackOpen && "gs-layout-compact", currentThreadId && "gs-layout-thread")}>
+        <aside id="gs-stack-rail" className="gs-sidebar" aria-label="Stack" hidden={!stackOpen}>
           <SectionLabel trailing={<span className="text-[10px] normal-case">{view.gtVersion ? `gt ${view.gtVersion}` : null}</span>}>
             Stack
           </SectionLabel>
@@ -766,6 +784,7 @@ function LayerPane({
                   truncated={files.data?.truncated ?? false}
                   loading={files.loading && files.data === undefined}
                   isViewed={isViewed}
+                  commentCounts={Object.fromEntries(fileList.map((file) => [file.path, allNotes.filter((note) => note.path === file.path && !note.delivery?.hidden).length + threads.filter((thread) => thread.path === file.path).length]))}
                   selection={selection}
                   onSelect={setSelection}
                   uncommitted={uncommitted.data?.files ?? null}
@@ -969,6 +988,7 @@ function FileNav({
   truncated,
   loading,
   isViewed,
+  commentCounts,
   selection,
   onSelect,
   uncommitted,
@@ -979,14 +999,35 @@ function FileNav({
   truncated: boolean;
   loading: boolean;
   isViewed: (file: ChangedFile) => boolean;
+  commentCounts: Record<string, number>;
   selection: FileSelection;
   onSelect: (selection: FileSelection) => void;
   uncommitted: UncommittedFile[] | null;
   uncommittedError: string | null;
   worktreePath: string | null;
 }) {
+  const [query, setQuery] = useState("");
+  const [filesOpen, setFilesOpen] = useState(false);
+  const filtered = files.filter((file) => file.path.toLowerCase().includes(query.toLowerCase().trim()));
+  const tree = makeFileTree(filtered);
+  const renderTree = (nodes: FileTreeNode[]): ReactNode => nodes.map((node) => {
+    if (node.file) {
+      const file = node.file;
+      const active = selection?.source === "layer" && selection.path === file.path;
+      const viewed = isViewed(file);
+      return <li key={file.path}><button type="button" className={cn("gs-filelink", active && "gs-filelink-active", viewed && "gs-filelink-viewed")} aria-current={active ? "true" : undefined} title={file.oldPath ? `${file.oldPath} → ${file.path}` : file.path} onClick={() => { onSelect({ source: "layer", path: file.path }); setFilesOpen(false); }}>
+        <span className={cn("gs-status", `gs-status-${file.status}`)} aria-label={`Status ${file.status}`}>{file.status}</span>
+        <span className="min-w-0 flex-1 truncate">{node.name}</span>
+        {viewed ? <Icon name="Check" className="size-3 text-muted-foreground" aria-label="Viewed" /> : null}
+        {commentCounts[file.path] ? <span className="gs-comment-count" aria-label={`${commentCounts[file.path]} comments`}>● {commentCounts[file.path]}</span> : null}
+        {file.binary ? <span className="text-[10px] text-muted-foreground">bin</span> : file.additions !== null ? <span className="gs-stats"><span className="gs-add">+{file.additions}</span> <span className="gs-del">−{file.deletions ?? 0}</span></span> : null}
+      </button></li>;
+    }
+    return <li key={node.path}><details key={`${node.path}:${Boolean(query)}`} open><summary className="gs-folder" title={node.path}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg><span className="truncate">{node.name}</span></summary><ul className="gs-folder-children">{renderTree(node.children)}</ul></details></li>;
+  });
   return (
     <nav className="gs-filenav" aria-label="Changed files">
+      <button type="button" className="gs-files-toggle" aria-expanded={filesOpen} onClick={() => setFilesOpen((open) => !open)}>Files · {files.length} {filesOpen ? "▴" : "▾"}</button>
       <label className="gs-file-select">
         <span className="sr-only">Changed file</span>
         <select
@@ -1009,39 +1050,13 @@ function FileNav({
           ))}
         </select>
       </label>
-      <div className="gs-file-list">
+      <div className={cn("gs-file-list", filesOpen && "gs-file-list-open")}>
         <SectionLabel trailing={<span>{files.length}</span>}>Layer changes</SectionLabel>
+        <label className="sr-only" htmlFor="gs-file-search">Search changed files</label>
+        <input id="gs-file-search" className="gs-file-search" type="search" placeholder="Search files" value={query} onChange={(event) => setQuery(event.target.value)} />
         {loading ? <Spinner label="Loading files…" /> : null}
-        <ul>
-          {files.map((file) => {
-            const active = selection?.source === "layer" && selection.path === file.path;
-            const viewed = isViewed(file);
-            return (
-              <li key={file.path}>
-                <button
-                  type="button"
-                  className={cn("gs-filelink", active && "gs-filelink-active", viewed && "gs-filelink-viewed")}
-                  aria-current={active ? "true" : undefined}
-                  title={file.oldPath ? `${file.oldPath} → ${file.path}` : file.path}
-                  onClick={() => onSelect({ source: "layer", path: file.path })}
-                >
-                  <span className={cn("gs-status", `gs-status-${file.status}`)} aria-label={`Status ${file.status}`}>
-                    {file.status}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">{fileName(file.path)}</span>
-                  {viewed ? <Icon name="Check" className="size-3 text-muted-foreground" aria-label="Viewed" /> : null}
-                  {file.binary ? (
-                    <span className="text-[10px] text-muted-foreground">bin</span>
-                  ) : file.additions !== null ? (
-                    <span className="gs-stats">
-                      <span className="gs-add">+{file.additions}</span> <span className="gs-del">−{file.deletions ?? 0}</span>
-                    </span>
-                  ) : null}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <ul>{renderTree(tree)}</ul>
+        {query && filtered.length === 0 ? <p className="gs-side-note">No matching files.</p> : null}
         {truncated ? <p className="gs-side-note">More files changed than BB lists.</p> : null}
         {worktreePath && (uncommitted?.length || uncommittedError) ? (
           <>
@@ -1057,7 +1072,7 @@ function FileNav({
                       className={cn("gs-filelink", active && "gs-filelink-active")}
                       aria-current={active ? "true" : undefined}
                       title={file.path}
-                      onClick={() => onSelect({ source: "uncommitted", path: file.path })}
+                      onClick={() => { onSelect({ source: "uncommitted", path: file.path }); setFilesOpen(false); }}
                     >
                       <span className="gs-status" aria-label={file.untracked ? "Untracked" : `Index ${file.index}, worktree ${file.worktree}`}>
                         {file.conflicted ? "!" : file.untracked ? "?" : (file.worktree.trim() || file.index.trim() || "M")}
@@ -1073,4 +1088,29 @@ function FileNav({
       </div>
     </nav>
   );
+}
+
+type FileTreeNode = { name: string; path: string; file?: ChangedFile; children: FileTreeNode[] };
+function makeFileTree(files: ChangedFile[]): FileTreeNode[] {
+  const root: FileTreeNode[] = [];
+  for (const file of files) {
+    const parts = file.path.split("/");
+    let children = root;
+    let path = "";
+    parts.forEach((name, index) => {
+      path = path ? `${path}/${name}` : name;
+      let node = children.find((item) => item.name === name);
+      if (!node) { node = { name, path, children: [] }; children.push(node); }
+      if (index === parts.length - 1) node.file = file;
+      children = node.children;
+    });
+  }
+  const compact = (nodes: FileTreeNode[]): FileTreeNode[] => nodes.map((node) => {
+    while (!node.file && node.children.length === 1 && !node.children[0]!.file) {
+      const child = node.children[0]!;
+      node = { ...child, name: `${node.name}/${child.name}` };
+    }
+    return { ...node, children: compact(node.children) };
+  });
+  return compact(root);
 }
