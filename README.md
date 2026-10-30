@@ -51,10 +51,10 @@ with their own configuration and authentication. It stores no tokens.
 
 ## Install
 
-Install from GitHub with credentials that can access this private repository:
+Install directly from this repository:
 
 ```sh
-bb plugin install https://github.com/prakashchokalingam/bb-plugin-graphite-stack
+bb plugin install git:https://github.com/prakashchokalingam/bb-plugin-graphite-stack.git
 ```
 
 For local development, install from this directory:
@@ -67,6 +67,16 @@ bb plugin install .
 
 Then open a thread whose environment is a Git repository with Graphite, and
 select the **Graphite** tab. Or open **Graphite stacks** in the navigation rail.
+
+### Start a review
+
+1. Select a branch in the stack.
+2. Select a changed file and hover over a line to reveal the comment control.
+3. Save a local draft, or choose a pending PR comment in the line options.
+4. Open **Comments** to review drafts and send selected local comments to a linked BB thread.
+
+Local drafts stay in BB until you send them. Pending PR comments remain separate
+and go to GitHub only when you submit a PR review.
 
 ## How the plugin reads a stack
 
@@ -205,3 +215,7 @@ point gt at a temporary `XDG_*` config, so they never touch your repositories
 or Graphite configuration. They skip when `gt` is missing.
 
 Missing Graphite parents do not hide the stack. The view preserves the reported parent name and marks incomplete layers. Stack mutations stay blocked until the parent is repaired; recovery actions remain available. The plugin does not infer replacement parents.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
