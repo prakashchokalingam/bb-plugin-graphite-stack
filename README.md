@@ -7,9 +7,9 @@ stack that `gt` tracks on each environment's machine. It needs no pull request,
 no GitHub authentication, and no Git remote. PR data from GitHub is optional
 enrichment.
 
-![Illustrative Graphite Stack review with a fictional order-total branch, inline diff, and local comment](docs/screenshots/review-mock.png)
+![Graphite Stack review with a fictional checkout branch, inline diff, and local comment](docs/screenshots/review.jpg)
 
-<sub>Illustration with fictional project data. The interface follows your BB theme.</sub>
+<sub>BB review view with fictional project data. The interface follows your BB theme.</sub>
 
 ## Why this exists
 
