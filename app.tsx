@@ -175,14 +175,14 @@ export default definePluginApp((app) => {
     availability: "fixed",
     id: "graphite",
     title: "Graphite",
-    icon: "Layers",
+    icon: "graphite-stack/stack",
     component: ThreadGraphiteTab,
     layout: "flush",
   });
   app.slots.navPanel({
     id: "stacks",
     title: "Graphite stacks",
-    icon: "Layers",
+    icon: "graphite-stack/stack",
     path: NAV_PATH,
     component: ProjectStacksPage,
   });
