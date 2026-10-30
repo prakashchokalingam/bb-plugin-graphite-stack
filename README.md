@@ -11,6 +11,16 @@ enrichment.
 
 <sub>BB review view with fictional project data. The interface follows your BB theme.</sub>
 
+## Review beside your thread
+
+Open the **Graphite** tab in a thread's right panel to follow the stack and review
+changes beside the conversation. The panel uses the thread's environment, so
+you can see the branches and local comments for that work.
+
+![Illustration of a BB thread beside the Graphite Stack review panel, with fictional project data](docs/screenshots/thread-review-mock.png)
+
+<sub>Illustration with a fictional project and thread.</sub>
+
 ## Why this exists
 
 Stacked changes often span several branches and worktrees. Graphite Stack brings
