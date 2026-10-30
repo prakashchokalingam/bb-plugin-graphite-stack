@@ -31,7 +31,7 @@ export function ThreadGraphiteTab({ threadId, environment }: ExperimentalThreadT
       </div>
     );
   }
-  return <GraphiteView environmentId={environment.id} currentThreadId={threadId} visible={visible} />;
+  return <GraphiteView key={environment.id} environmentId={environment.id} currentThreadId={threadId} visible={visible} />;
 }
 
 /** True while the document is visible. Plugin pages have no tab visibility. */

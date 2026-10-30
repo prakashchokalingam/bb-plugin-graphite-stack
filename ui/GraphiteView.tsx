@@ -19,7 +19,6 @@ import { ThreadLinks } from "./ThreadLinks";
 import { Chip, InlineError, Notice, SectionLabel, Segmented, Spinner, StatePanel } from "./primitives";
 import {
   checksLabel,
-  defaultSelection,
   fileDir,
   fileKey,
   fileKind,
@@ -40,24 +39,6 @@ import type { GraphiteRpc } from "./rpc";
 
 type Tab = "changes" | "comments" | "commits";
 type Scope = "stack" | "all";
-const SCOPE_KEY = "bb-graphite-stack:scope";
-
-function readScope(repoKey: string): { scope?: string; anchor?: string | null } | null {
-  try {
-    const raw = typeof window === "undefined" ? null : window.localStorage.getItem(`${SCOPE_KEY}:${repoKey}`);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeScope(repoKey: string, value: { scope: Scope; anchor: string | null }) {
-  try {
-    if (typeof window !== "undefined") window.localStorage.setItem(`${SCOPE_KEY}:${repoKey}`, JSON.stringify(value));
-  } catch {
-    // Private mode: the scope still works for this session.
-  }
-}
 
 /** Read the topology first, then fetch only the visible branches in batches. */
 function useStackDetails(rpc: GraphiteRpc, environmentId: string, base: StackView | undefined, scope: Scope, anchor: string | null, enabled: boolean) {
@@ -161,10 +142,12 @@ export function GraphiteView({
   const [operation, setOperation] = useState<OperationRequest | null>(null);
   const [scope, setScope] = useState<Scope>("stack");
   const [anchor, setAnchor] = useState<string | null>(null);
-  const [restoredFor, setRestoredFor] = useState<string | null>(null);
+  const [initializedFor, setInitializedFor] = useState<string | null>(null);
   const base = stack.data;
+  const checkoutLayer = base?.layers.find((item) => item.name === base.currentBranch);
+  const checkoutKey = base?.status === "ready" && base.repoKey ? JSON.stringify([environmentId, base.repoKey, base.currentBranch, checkoutLayer ? (checkoutLayer.trunk ? "trunk" : "tracked") : "untracked"]) : null;
   const initialAnchor = anchor ?? selected ?? (base?.currentBranch && base.layers.some((item) => item.name === base.currentBranch && !item.trunk) ? base.currentBranch : null);
-  const details = useStackDetails(rpc, environmentId, base, scope, initialAnchor, visible && restoredFor === base?.repoKey);
+  const details = useStackDetails(rpc, environmentId, base, scope, initialAnchor, visible && checkoutKey !== null && initializedFor === checkoutKey);
   const view = details.view;
   useEffect(() => {
     if (view?.repoKey) setRepoKey(view.repoKey);
@@ -183,49 +166,16 @@ export function GraphiteView({
     enabled: visible,
     version,
   });
-  // Restore the scope and anchor for this repository once.
+  // The current checkout owns the default selection. Do not restore a
+  // repository-wide anchor from another worktree or a previous checkout.
   useEffect(() => {
-    const repoKey = view?.repoKey ?? null;
-    if (!repoKey || restoredFor === repoKey) return;
-    const saved = readScope(repoKey);
-    const names = new Set((view?.layers ?? []).map((layer) => layer.name));
-    if (saved && typeof saved === "object") {
-      if (saved.anchor && names.has(saved.anchor)) setAnchor(saved.anchor);
-      if (saved.scope === "all" || saved.scope === "stack") setScope(saved.scope);
-    }
-    setRestoredFor(repoKey);
-  }, [view?.repoKey, restoredFor]);
-
-  // Persist only after the restore, so defaults do not overwrite a saved stack.
-  useEffect(() => {
-    const repoKey = view?.repoKey ?? null;
-    if (!repoKey || restoredFor !== repoKey) return;
-    writeScope(repoKey, { scope, anchor });
-  }, [view?.repoKey, restoredFor, scope, anchor]);
-
-  // A trunk has no single stack, so this view falls back to All.
-  useEffect(() => {
-    if (!view || view.status !== "ready" || restoredFor !== view.repoKey) return;
-    const byName = new Map(view.layers.map((layer) => [layer.name, layer]));
-    const current = view.currentBranch ? (byName.get(view.currentBranch) ?? null) : null;
-    const candidate = anchor ?? selected ?? (current && !current.trunk ? current.name : null);
-    if (scope === "stack" && !candidate) setScope("all");
-  }, [view, restoredFor, scope, anchor, selected]);
-
-  // Keep the selection inside the scoped stack.
-  useEffect(() => {
-    if (!view || view.status !== "ready") return;
-    const byName = new Map(view.layers.map((layer) => [layer.name, layer]));
-    if (selected === null || !byName.has(selected)) {
-      setSelected(defaultSelection(view));
-      return;
-    }
-    if (scope !== "stack") return;
-    const name = anchor ?? selected;
-    const target = name ? (byName.get(name) ?? null) : null;
-    if (!target || target.trunk) return;
-    if (!stackMembers(view, target.name).some((layer) => layer.name === selected)) setSelected(target.name);
-  }, [view, selected, scope, anchor]);
+    if (!base || !checkoutKey || initializedFor === checkoutKey) return;
+    const current = base.layers.find((item) => item.name === base.currentBranch && !item.trunk);
+    setSelected(current?.name ?? null);
+    setAnchor(null);
+    setScope(current ? "stack" : "all");
+    setInitializedFor(checkoutKey);
+  }, [base, checkoutKey, initializedFor]);
 
   if (!view) {
     if (stack.error) {
@@ -298,7 +248,7 @@ export function GraphiteView({
   const rows = activeScope === "stack" ? scoped : railRows(view);
   const railNames = new Set(rows.map((row) => row.layer.name));
   const needsRestack = rows.filter((row) => row.layer.needsRestack).length;
-  const layer = view.layers.find((item) => item.name === selected) ?? null;
+  const layer = initializedFor === checkoutKey ? (view.layers.find((item) => item.name === selected) ?? null) : null;
   const prMap = prs.data?.prs ?? {};
   const untracked = untrackedBranches(view);
   const incompleteLayers = view.layers.filter((item) => railNames.has(item.name) && item.parent !== null &&
@@ -337,6 +287,7 @@ export function GraphiteView({
             <Icon name="Layers" aria-hidden /> Stack · {scoped.length || view.layers.length}
           </Button>
           {layer ? <span className="gs-stack-current" title={`${layer.name}${layer.parent ? ` ← ${layer.parent}` : ""}`}>{layer.name}{layer.parent ? ` ← ${layer.parent}` : ""}</span> : null}
+          {current && !current.trunk && layer && layer.name !== current.name ? <Button size="sm" variant="ghost" onClick={() => { setSelected(current.name); setAnchor(null); setScope("stack"); }}>Current branch</Button> : null}
           {toolbar}
           {stack.loading ? <Spinner label="Refreshing" /> : null}
           {view.busyRepo ? <Chip tone="warning">Operation running</Chip> : null}
@@ -470,8 +421,15 @@ export function GraphiteView({
               currentThreadId={currentThreadId}
               onOperation={setOperation}
             />
+          ) : initializedFor !== checkoutKey ? (
+            <StatePanel title="Loading checkout">Finding the current worktree branch.</StatePanel>
           ) : (
-            <StatePanel title="No branches tracked">Create a branch, or track an existing branch with Graphite.</StatePanel>
+            <StatePanel title={!view.currentBranch ? "Detached HEAD" : current?.trunk ? "Current branch is trunk" : "Current branch is not tracked"} actions={<>
+              {view.currentBranch && !current ? <Button size="sm" variant="outline" disabled={view.busyRepo} onClick={() => setOperation({ kind: "track", branch: view.currentBranch!, parent: "" })}>Track branch…</Button> : null}
+              <Button size="sm" variant="outline" onClick={() => { setScope("all"); setStackOpen(true); }}>Browse all branches</Button>
+            </>}>
+              {!view.currentBranch ? "This worktree has a detached HEAD." : current?.trunk ? `${view.currentBranch} is a trunk branch and has no parent-relative review.` : `${view.currentBranch} is not tracked by Graphite.`}
+            </StatePanel>
           )}
         </main>
       </div>

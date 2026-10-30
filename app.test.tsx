@@ -294,10 +294,8 @@ describe("stack review", () => {
       ]),
     );
     expect(slot.getByRole("button", { name: "This stack · 3" })).toBeTruthy();
-    expect(JSON.parse(window.localStorage.getItem("bb-graphite-stack:scope:repo_1") ?? "{}")).toMatchObject({
-      scope: "stack",
-      anchor: "feature/other-top",
-    });
+    fireEvent.click(slot.getByRole("button", { name: "Current branch" }));
+    await waitFor(() => expect(calls(slot, "layerFiles").some((call) => call.branch === "feature/checkout-api")).toBe(true));
   });
 
   it("hides repo-wide parent warnings outside the scoped stack", async () => {
@@ -311,16 +309,47 @@ describe("stack review", () => {
     await slot.findByText("Incomplete Graphite stack");
   });
 
-  it("restores the saved stack for a repository", async () => {
+  it("ignores a legacy repository-wide stack selection", async () => {
     window.localStorage.setItem("bb-graphite-stack:scope:repo_1", JSON.stringify({ scope: "stack", anchor: "feature/checkout-ui" }));
     const slot = renderTab();
     const rail = await slot.findByRole("list", { name: "Graphite stack" });
-    await waitFor(() => expect(calls(slot, "layerFiles").map((input) => input.branch)).toContain("feature/checkout-ui"));
+    await waitFor(() => expect(calls(slot, "layerFiles").map((input) => input.branch)).toContain("feature/checkout-api"));
     expect(within(rail).getAllByRole("button").map((button) => button.getAttribute("data-layer"))).toEqual([
-      "feature/checkout-ui",
+      "feature/checkout-api",
       "feature/order-model",
       "main",
     ]);
+  });
+
+  it("defaults two worktrees in the same repository to their own branches", async () => {
+    const first = stackView();
+    const second = stackView({ environmentId: "env_other", currentBranch: "feature/checkout-ui" });
+    window.localStorage.setItem("bb-graphite-stack:scope:repo_1", JSON.stringify({ scope: "stack", anchor: "feature/checkout-api" }));
+    const slot = renderTab({ props: { environment: { id: "env_other" } }, rpc: handlers({ stack: () => second }) });
+    await waitFor(() => expect(calls(slot, "layerFiles").some((call) => call.branch === second.currentBranch)).toBe(true));
+    expect(calls(slot, "layerFiles").some((call) => call.branch === first.currentBranch)).toBe(false);
+  });
+
+  it("follows a changed checkout branch on refresh", async () => {
+    const view = stackView();
+    const slot = renderTab({ rpc: handlers({ stack: () => ({ ...view }) }) });
+    await waitFor(() => expect(calls(slot, "layerFiles").some((call) => call.branch === "feature/checkout-api")).toBe(true));
+    view.currentBranch = "feature/checkout-ui";
+    fireEvent.click(slot.getByRole("button", { name: "Refresh all data" }));
+    await waitFor(() => expect(calls(slot, "layerFiles").some((call) => call.branch === "feature/checkout-ui")).toBe(true));
+    expect(slot.getByRole("button", { name: /^Stack ·/u }).nextElementSibling?.getAttribute("title")).toContain("feature/checkout-ui");
+  });
+
+  it.each([
+    ["feature/untracked", "Current branch is not tracked"],
+    ["main", "Current branch is trunk"],
+    [null, "Detached HEAD"],
+  ])("explains a checkout without a review stack: %s", async (currentBranch, title) => {
+    const slot = renderTab({ rpc: handlers({ stack: () => stackView({ currentBranch }) }) });
+    await slot.findByText(title);
+    expect(calls(slot, "layerFiles")).toEqual([]);
+    expect(slot.getByRole("button", { name: "Browse all branches" })).toBeTruthy();
+    if (currentBranch === "feature/untracked") expect(slot.getByRole("button", { name: "Track branch…" })).toBeTruthy();
   });
 
   it("previews a layer on selection without any mutation", async () => {
