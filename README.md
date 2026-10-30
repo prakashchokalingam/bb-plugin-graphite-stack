@@ -17,9 +17,9 @@ Open the **Graphite** tab in a thread's right panel to follow the stack and revi
 changes beside the conversation. The panel uses the thread's environment, so
 you can see the branches and local comments for that work.
 
-![Illustration of a BB thread beside the Graphite Stack review panel, with fictional project data](docs/screenshots/thread-review-mock.png)
+![A BB thread beside the Graphite Stack review panel, using a fictional verification repository](docs/screenshots/thread-review.jpg)
 
-<sub>Illustration with a fictional project and thread.</sub>
+<sub>Real BB thread and Graphite panel with a fictional verification repository. Additional thread-list entries are simulated.</sub>
 
 ## Why this exists
 
