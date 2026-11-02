@@ -28,7 +28,7 @@ the branch graph, parent-relative changes, and review comments into BB so you
 can follow the work from the same place as your agent threads.
 
 Review a branch locally first. Keep comments as local drafts, send selected
-drafts to a linked BB thread, or use the separate GitHub PR review flow when a
+drafts to the open BB thread, or use the separate GitHub PR review flow when a
 pull request exists.
 
 ## What you get
@@ -48,7 +48,7 @@ pull request exists.
 - **Local line comments** on any layer, with replies, edit, local resolve,
   and delete. A comment keeps its original commit, path, side, and line range.
   Changed lines show as outdated. Select local drafts to preview and send one
-  message to a linked BB thread. Sent, queued, and uncertain outcomes have
+  message to the open BB thread, or choose a thread on the stacks page. Sent, queued, and uncertain outcomes have
   separate labels. Local comments are not sent to GitHub.
 - **PR review** (only when the branch has a GitHub PR and `gh` is
   authenticated on that machine): read review threads, reply, resolve and
@@ -101,7 +101,7 @@ select the **Graphite** tab. Or open **Graphite stacks** in the navigation rail.
 1. Select a branch in the stack.
 2. Select a changed file and hover over a line to reveal the comment control.
 3. Save a local draft, or choose a pending PR comment in the line options.
-4. Open **Comments** to review drafts and send selected local comments to a linked BB thread.
+4. Open **Comments** to review drafts and send selected local comments to the open BB thread. On the stacks page, choose a thread first.
 
 Local drafts stay in BB until you send them. Pending PR comments remain separate
 and go to GitHub only when you submit a PR review.

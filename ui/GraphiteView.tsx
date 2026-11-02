@@ -23,6 +23,7 @@ import {
   fileKey,
   fileKind,
   fileName,
+  patchRanges,
   prLink,
   prStateLabel,
   railRows,
@@ -576,13 +577,16 @@ function LayerPane({
 
   const onPatch = useCallback((patch: string | null) => setPatchText(patch), []);
   const prUnavailable = layer.trunk ? "Trunk branches have no review." : prUnavailableReason(prStatus, prMessage, pr);
-  // Private notes belong to the branch's linked thread only, never to the
-  // thread that happens to host this panel.
-  const noteThreadId = layer.link?.status === "valid" ? layer.link.threadId : null;
+  // The hosting thread is the default destination even when browsing a
+  // different branch; the user sees the destination before sending.
+  const noteThreadId = currentThreadId ?? (layer.link?.status === "valid" ? layer.link.threadId : null);
   const allNotes = notes.data?.notes ?? [];
   const threads = prThreads.data?.threads ?? [];
   const fileNotes = selectedFile ? allNotes.filter((note) => note.path === selectedFile.path && !note.delivery?.hidden) : [];
   const fileThreads = selectedFile ? threads.filter((thread) => thread.path === selectedFile.path) : [];
+  const visibleRanges = patchText ? patchRanges(patchText) : null;
+  const isLineInPatch = (side: "old" | "new", line: number) => visibleRanges?.[side].some(([from, to]) => line >= from && line <= to) ?? false;
+  const hasCommentsOutsideDiff = visibleRanges !== null && (fileNotes.some((note) => note.anchorState !== "current" || !isLineInPatch(note.side, note.endLine)) || fileThreads.some((thread) => thread.isOutdated || thread.line === null || thread.diffSide === null || !isLineInPatch(thread.diffSide === "LEFT" ? "old" : "new", thread.line)));
   const visibleNotes = allNotes.filter((note) => (showHidden || !note.delivery?.hidden) && (!hideResolved || !note.resolved));
   const visibleThreads = hideResolved ? threads.filter((thread) => !thread.isResolved) : threads;
   const openComments = allNotes.filter((note) => !note.resolved).length + threads.filter((thread) => !thread.isResolved).length;
@@ -795,7 +799,8 @@ function LayerPane({
                         inlineReview={view.repoKey && !selectedFile.binary ? {
                           onAdd: (side, line) => setInlineAnchor({ side, line }),
                           renderLine: (side, line) => <div className="gs-inline-comments">
-                            <NoteList rpc={rpc} environmentId={env} notes={fileNotes.filter((note) => note.side === side && note.endLine === line)} currentHeadSha={snapshot.headSha} onChanged={notes.reload} />
+                            <NoteList rpc={rpc} environmentId={env} notes={fileNotes.filter((note) => note.anchorState === "current" && note.side === side && note.endLine === line)} currentHeadSha={snapshot.headSha} onChanged={notes.reload} inline />
+                            {fileThreads.some((thread) => !thread.isOutdated && thread.line === line && thread.diffSide === (side === "old" ? "LEFT" : "RIGHT")) ? <PrThreads rpc={rpc} environmentId={env} branch={layer.name} threads={fileThreads.filter((thread) => !thread.isOutdated && thread.line === line && thread.diffSide === (side === "old" ? "LEFT" : "RIGHT"))} truncated={false} onChanged={prThreads.reload} /> : null}
                             {inlineAnchor?.side === side && inlineAnchor.line === line ? <LineComposer key={`${layer.name}:${selectedFile.path}:${side}:${line}`} rpc={rpc} environmentId={env} repoKey={view.repoKey!} branch={layer.name} path={selectedFile.path} snapshot={snapshot} patch={patchText} noteThreadId={noteThreadId} prAvailability={prUnavailable} initialAnchor={inlineAnchor} onClose={() => setInlineAnchor(null)} onSaved={(destination, result) => { commentSaved(destination, result); setInlineAnchor(null); }} /> : null}
                           </div>,
                         } : undefined}
@@ -815,15 +820,7 @@ function LayerPane({
                           onSaved={commentSaved}
                         />
                       ) : null}
-                      {fileNotes.length > 0 || fileThreads.length > 0 ? (
-                        <div className="gs-file-comments" aria-label={`Comments on ${selectedFile.path}`}>
-                          <h3 className="gs-subhead">All comments for this file</h3>
-                          <NoteList rpc={rpc} environmentId={env} notes={fileNotes} currentHeadSha={snapshot.headSha} onChanged={notes.reload} />
-                          {fileThreads.length > 0 ? (
-                            <PrThreads rpc={rpc} environmentId={env} branch={layer.name} threads={fileThreads} truncated={false} onChanged={prThreads.reload} />
-                          ) : null}
-                        </div>
-                      ) : null}
+                      {hasCommentsOutsideDiff ? <p className="text-xs text-muted-foreground">Some comments are outside this diff. <button type="button" className="underline" onClick={() => setTab("comments")}>View comments</button></p> : null}
                     </>
                   ) : selectedUncommitted && worktree ? (
                     <>
@@ -871,18 +868,10 @@ function LayerPane({
           </div>
           {layer.trunk ? <p className="text-xs text-muted-foreground">Trunk branches have no comments.</p> : null}
           {notes.error ? <InlineError onRetry={notes.reload}>{notes.error}</InlineError> : null}
-          <ThreadReview rpc={rpc} environmentId={env} branch={layer.name} threadId={noteThreadId} notes={allNotes} onChanged={notes.reload} />
           <label className="gs-check"><input type="checkbox" checked={showHidden} onChange={(event) => setShowHidden(event.target.checked)} /> Show locally hidden comments</label>
           <h3 className="gs-subhead">Local and thread comments</h3>
           {notes.data?.truncated ? <p className="text-[11px] text-muted-foreground">Older notes are not shown.</p> : null}
-          <NoteList
-            rpc={rpc}
-            environmentId={env}
-            notes={visibleNotes}
-            currentHeadSha={snapshot?.headSha ?? notes.data?.snapshot?.headSha ?? null}
-            emptyText={notes.loading ? "Loading notes…" : "No local comments."}
-            onChanged={notes.reload}
-          />
+          <ThreadReview rpc={rpc} environmentId={env} branch={layer.name} currentThreadId={currentThreadId} linkedThread={layer.link?.status === "valid" ? layer.link.thread : null} candidates={view.layers.flatMap((item) => item.candidates)} notes={allNotes} visibleNotes={visibleNotes} currentHeadSha={snapshot?.headSha ?? notes.data?.snapshot?.headSha ?? null} emptyText={notes.loading ? "Loading notes…" : "No local comments."} onChanged={notes.reload} />
           <h3 className="gs-subhead">Pull request threads</h3>
           {reviewUnavailable ? <p className="text-xs text-muted-foreground">{reviewUnavailable}</p> : null}
           {prThreads.error ? <InlineError onRetry={prThreads.reload}>{prThreads.error}</InlineError> : null}

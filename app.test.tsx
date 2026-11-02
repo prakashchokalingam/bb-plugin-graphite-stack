@@ -8,6 +8,7 @@ import { rpcContract } from "./contract";
 import type { LayerView, OperationPreview, StackView } from "./contract";
 import type { ChangedFile, DiffSnapshot } from "./lib/model";
 import { ThreadGraphiteTab, ProjectStacksPage } from "./app";
+import { GraphiteView } from "./ui/GraphiteView";
 
 type Contract = typeof rpcContract;
 type Handlers = PluginRpcTestHandlers<Contract>;
@@ -428,19 +429,75 @@ describe("line comments", () => {
     return body;
   }
 
+  it("shows an inline draft once without repeating its code or opening reply by default", async () => {
+    const anchor = { path: "src/checkout-api.ts", side: "new" as const, startLine: 2, endLine: 2, baseSha: SHA("a"), headSha: SHA("b") };
+    const note = { ...noteFrom({ environmentId: ENV, branch: "feature/checkout-api", anchor, body: "Explain this", threadId: null }), lineText: "b" };
+    const slot = renderTab({ rpc: handlers({ notesList: () => ({ notes: [note], snapshot: snapshotFor("feature/checkout-api", "feature/order-model"), truncated: false }) }) });
+    const card = await slot.findByRole("article", { name: /Comment on/u });
+    expect(within(card).queryByText("b")).toBeNull();
+    expect(slot.getAllByText("Explain this")).toHaveLength(1);
+    expect(within(card).queryByPlaceholderText("Reply privately")).toBeNull();
+    const action = within(card).getByRole("button", { name: "Reply locally" });
+    expect(action.getAttribute("data-tooltip")).toBe("Reply locally");
+    fireEvent.click(action);
+    expect(within(card).getByPlaceholderText("Reply privately")).toBeTruthy();
+    expect(slot.queryByText("All comments for this file")).toBeNull();
+  });
+
+  it("keeps an uncertain delivery visible and blocks another send", async () => {
+    const anchor = { path: "src/checkout-api.ts", side: "new" as const, startLine: 2, endLine: 2, baseSha: SHA("a"), headSha: SHA("b") };
+    const note = { ...noteFrom({ environmentId: ENV, branch: "feature/checkout-api", anchor, body: "Check this", threadId: null }), delivery: { threadId: "thr_self", batchId: "batch_1", status: "unknown" as const, hidden: false } };
+    const slot = renderTab({ rpc: handlers({ notesList: () => ({ notes: [note], snapshot: snapshotFor("feature/checkout-api", "feature/order-model"), truncated: false }), noteReconcile: () => ({ status: "unknown" }) }) });
+    fireEvent.click(await slot.findByRole("tab", { name: /Comments/u }));
+    await slot.findByText("Send result unknown");
+    expect(slot.queryByRole("checkbox", { name: /Select Check this/u })).toBeNull();
+    fireEvent.click(slot.getByRole("button", { name: "Check delivery" }));
+    await slot.findByText(/Delivery is still unknown/u);
+    expect(calls(slot, "notesSend")).toEqual([]);
+  });
+
+  it("keeps outdated comments in the Comments tab without placing them on a misleading line", async () => {
+    const anchor = { path: "src/checkout-api.ts", side: "new" as const, startLine: 2, endLine: 2, baseSha: SHA("a"), headSha: SHA("b") };
+    const note = { ...noteFrom({ environmentId: ENV, branch: "feature/checkout-api", anchor, body: "Old comment", threadId: null }), anchorState: "outdated" as const };
+    const slot = renderTab({ rpc: handlers({ notesList: () => ({ notes: [note], snapshot: snapshotFor("feature/checkout-api", "feature/order-model"), truncated: false }) }) });
+    fireEvent.click(await slot.findByRole("button", { name: "View comments" }));
+    expect(await slot.findByText("Old comment")).toBeTruthy();
+    expect(slot.getByText("Outdated")).toBeTruthy();
+  });
+
   it("previews selected local drafts before sending one thread message", async () => {
     const view = stackView();
-    view.layers.find((item) => item.name === "feature/checkout-api")!.link = { branch: "feature/checkout-api", threadId: "thr_self", environmentId: ENV, linkedAt: 1, status: "valid", thread: null };
     const anchor = { path: "src/checkout-api.ts", side: "new" as const, startLine: 2, endLine: 2, baseSha: SHA("a"), headSha: SHA("b") };
     const note = noteFrom({ environmentId: ENV, branch: "feature/checkout-api", anchor, body: "Please check this", threadId: "thr_self" });
     const slot = renderTab({ rpc: handlers({ stack: () => view, notesList: () => ({ notes: [note], snapshot: snapshotFor("feature/checkout-api", "feature/order-model"), truncated: false }), notesSend: () => ({ status: "sent", message: null }) }) });
     fireEvent.click(await slot.findByRole("tab", { name: /Comments/u }));
-    fireEvent.click(await slot.findByRole("checkbox", { name: /Please check this/u }));
-    fireEvent.click(slot.getByRole("button", { name: "Review message · 1" }));
-    expect(slot.getByText("Message to linked thread")).toBeTruthy();
+    expect(slot.getAllByText("Please check this")).toHaveLength(1);
+    expect(slot.getByText("Send to This thread")).toBeTruthy();
+    expect((await slot.findByRole("checkbox", { name: /Please check this/u }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(slot.getByRole("button", { name: "Review & send · 1" }));
+    expect(slot.getByText("Send to This thread")).toBeTruthy();
     expect(calls(slot, "notesSend")).toEqual([]);
     fireEvent.click(slot.getByRole("button", { name: "Send 1 comment" }));
     await waitFor(() => expect(calls(slot, "notesSend")).toEqual([{ environmentId: ENV, branch: "feature/checkout-api", threadId: "thr_self", noteIds: ["note_1"] }]));
+  });
+
+  it("lets the full page choose a destination without linking the branch", async () => {
+    const anchor = { path: "src/checkout-api.ts", side: "new" as const, startLine: 2, endLine: 2, baseSha: SHA("a"), headSha: SHA("b") };
+    const note = noteFrom({ environmentId: ENV, branch: "feature/checkout-api", anchor, body: "Page draft", threadId: null });
+    const slot = renderSlot<{ environmentId: string; currentThreadId: string | null; visible: boolean }, Contract>(
+      { component: GraphiteView }, { environmentId: ENV, currentThreadId: null, visible: true },
+      { rpc: handlers({ notesList: () => ({ notes: [note], snapshot: snapshotFor("feature/checkout-api", "feature/order-model"), truncated: false }), notesSend: () => ({ status: "sent", message: null }) }) },
+    );
+    fireEvent.click(await slot.findByRole("tab", { name: /Comments/u }));
+    const destination = await slot.findByRole("combobox", { name: "Send to" });
+    fireEvent.change(destination, { target: { value: "thr_candidate" } });
+    expect((slot.getByRole("checkbox", { name: /Select Page draft/u }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(slot.getByRole("button", { name: "Review & send · 1" }));
+    expect(slot.getByText("Send to Build API")).toBeTruthy();
+    expect(calls(slot, "notesSend")).toEqual([]);
+    fireEvent.click(slot.getByRole("button", { name: "Send 1 comment" }));
+    await waitFor(() => expect(calls(slot, "notesSend")[0]?.threadId).toBe("thr_candidate"));
+    expect(calls(slot, "linkThread")).toEqual([]);
   });
 
   it("keeps full-file context in the same inline diff", async () => {
@@ -494,8 +551,8 @@ describe("line comments", () => {
       branch: "feature/checkout-api",
       anchor: { path: "src/checkout-api.ts", side: "new", startLine: 2, endLine: 3, baseSha: SHA("a"), headSha: SHA("b") },
       body: "Check null input",
-      // No thread is linked to the branch, so the note has no thread.
-      threadId: null,
+      // The hosting thread is the default destination, without a branch link.
+      threadId: "thr_self",
     });
     expect(calls(slot, "pendingAdd")).toEqual([]);
   });

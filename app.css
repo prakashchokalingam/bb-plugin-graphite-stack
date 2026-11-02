@@ -624,6 +624,13 @@ details[open] > .gs-folder::before { content: '▾'; }
 .gs-comment-resolved {
   opacity: 0.75;
 }
+.gs-comment-action { position: relative; display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 5px; background: transparent; color: var(--muted-foreground); cursor: pointer; }
+.gs-comment-action:hover, .gs-comment-action:focus-visible { color: var(--foreground); background: var(--state-hover); }
+.gs-comment-action:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.gs-comment-action:disabled { opacity: .45; cursor: default; }
+.gs-comment-action::after { content: attr(data-tooltip); display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); z-index: 20; padding: 4px 7px; border: 1px solid var(--border); border-radius: 5px; background: var(--background); color: var(--foreground); box-shadow: 0 2px 8px #0003; font-size: 11px; white-space: nowrap; pointer-events: none; }
+.gs-comment-action:hover::after, .gs-comment-action:focus-visible::after { display: block; }
+.gs-comment-action:last-child::after { left: auto; right: 0; transform: none; }
 .gs-comment-head {
   display: flex;
   flex-wrap: wrap;
@@ -840,6 +847,8 @@ details[open] > .gs-folder::before { content: '▾'; }
 .gs-incomplete summary { cursor: pointer; }
 .gs-incomplete ul { max-height: 160px; overflow: auto; padding-left: 16px; margin: 6px 0; }
 .gs-thread-review { display:grid; gap:8px; padding:12px; border:1px solid var(--border); border-radius:8px; }
+.gs-comment-list { display: grid; gap: 10px; }
+.gs-send-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .gs-review-select { display:flex; gap:8px; align-items:flex-start; font-size:12px; padding:6px 0; }
 .gs-review-select span { overflow-wrap:anywhere; }
 .gs-review-preview { display:grid; gap:8px; padding:12px; border:1px solid var(--border); border-radius:6px; }

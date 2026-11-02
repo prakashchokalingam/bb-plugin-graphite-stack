@@ -6,7 +6,7 @@ them.
 - A **Graphite** tab on each thread with the stack rail, each layer's true
   Graphite parent, and only that layer's changes in the inline review diff.
 - A **Graphite stacks** page that lists every Graphite repository in a project.
-- Local inline comments with resolve, outdated detection, and an optional grouped send to a linked BB thread.
+- Local inline comments with resolve, outdated detection, and an optional grouped send to the open BB thread or a chosen thread.
 - Optional GitHub PR review: replies, resolve, and pending reviews submitted as
   Comment, Approve, or Request changes.
 - Previewed `gt` actions: create, track, restack, sync, draft submit, and

@@ -1177,10 +1177,7 @@ export default async function plugin(bb: BbPluginApi) {
       guarded(async () => {
         const ctx = await requireRepo(environmentId);
         return withReviewLock(ctx.repoKey, `thread-notes:${branch}`, async () => {
-          const link = store.getLink(ctx.repoKey, branch);
-          if (!link || link.threadId !== threadId) throw new UserError("Link this branch to the destination thread first.");
-          const thread = await validateThreadForRepo(ctx, threadId);
-          if (thread.environmentId !== link.environmentId) throw new UserError("The linked thread changed environment. Link it again before sending.");
+          await validateThreadForRepo(ctx, threadId);
           if (new Set(noteIds).size !== noteIds.length) throw new UserError("A draft was selected more than once.");
           const notes = noteIds.map((id) => ownNote(ctx, id));
           if (notes.some((note) => note.branch !== branch || note.parentId !== null || note.resolved || store.getNoteDelivery(note.id))) throw new UserError("Only unresolved local drafts can be sent.");

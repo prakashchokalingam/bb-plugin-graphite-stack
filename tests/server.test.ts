@@ -106,11 +106,12 @@ describe.skipIf(!hasGt)("server with real gt", () => {
   });
 
   it("sends selected local drafts once and keeps an uncertain result blocked", async () => {
-    await server.call("linkThread", { environmentId: "env_main", branch: "feature/api", threadId: "thr_main" });
     const files = await server.call("layerFiles", { environmentId: "env_main", branch: "feature/api" });
     const anchor = { path: "src/checkout.ts", side: "new", startLine: 1, endLine: 1, baseSha: files.snapshot.baseSha, headSha: files.snapshot.headSha };
     const one = await server.call("noteCreate", { environmentId: "env_main", branch: "feature/api", anchor, body: "First draft", threadId: null });
     const two = await server.call("noteCreate", { environmentId: "env_main", branch: "feature/api", anchor, body: "Second draft", threadId: null });
+    w.threads.set("thr_wrong_project", thread("thr_wrong_project", "env_main", { projectId: "proj_2" }));
+    await expect(server.call("notesSend", { environmentId: "env_main", branch: "feature/api", threadId: "thr_wrong_project", noteIds: [one.id] })).rejects.toThrow(/another project/u);
     const messages: unknown[] = [];
     w.send = async (input) => { messages.push(input); return { ok: true, delivery: "sent" }; };
     const result = await server.call("notesSend", { environmentId: "env_main", branch: "feature/api", threadId: "thr_main", noteIds: [one.id, two.id] });
