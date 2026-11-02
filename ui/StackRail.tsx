@@ -92,7 +92,7 @@ function LayerRow({
         <span className="gs-layer-chips">
           {current ? <Chip tone="brand">Current</Chip> : null}
           {!layer.trunk && layer.detailsLoaded !== false ? <Chip>{layer.commitCount === 1 ? "1 commit" : `${layer.commitCount} commits`}</Chip> : null}
-          {layer.needsRestack ? (
+          {layer.needsRestack && pr?.state !== "MERGED" ? (
             <Chip tone="warning" icon="Repeat">
               Needs restack
             </Chip>

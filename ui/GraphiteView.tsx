@@ -248,7 +248,7 @@ export function GraphiteView({
   const activeScope: Scope = scope === "stack" && anchorName ? "stack" : "all";
   const rows = activeScope === "stack" ? scoped : railRows(view);
   const railNames = new Set(rows.map((row) => row.layer.name));
-  const needsRestack = rows.filter((row) => row.layer.needsRestack).length;
+  const needsRestack = rows.filter((row) => row.layer.needsRestack && prs.data?.prs[row.layer.name]?.state !== "MERGED").length;
   const layer = initializedFor === checkoutKey ? (view.layers.find((item) => item.name === selected) ?? null) : null;
   const prMap = prs.data?.prs ?? {};
   const untracked = untrackedBranches(view);
@@ -614,6 +614,8 @@ function LayerPane({
 
   const title = pr?.title ?? layer.commits[0]?.subject ?? layer.name;
   const prState = pr ? prStateLabel(pr) : null;
+  const merged = pr?.state === "MERGED";
+  const prLookupUnavailable = prStatus === "error" || prStatus === "gh-missing" || prStatus === "gh-unauthenticated";
   const checks = pr ? checksLabel(pr.checks) : null;
   const link = pr ? prLink(pr) : null;
   const moveFile = (delta: number) => {
@@ -628,9 +630,10 @@ function LayerPane({
       <header className="gs-layer-head">
         <h1>{title}</h1>
         <div className="gs-meta">
-          {prState ? <Chip tone={prState.tone}>{prState.label}</Chip> : layer.trunk ? <Chip>Trunk</Chip> : <Chip>Local branch</Chip>}
+          {layer.trunk ? <Chip>Trunk</Chip> : prState ? <Chip tone={prState.tone}>{prState.label}</Chip> : prStatus === undefined ? <Chip>Checking PR…</Chip> : prLookupUnavailable ? <Chip tone="warning">PR status unavailable</Chip> : <Chip>Local branch</Chip>}
+          {prState && prLookupUnavailable ? <Chip tone="warning">PR status unavailable</Chip> : null}
           {checks ? <Chip tone={checks.tone}>{checks.label}</Chip> : null}
-          {layer.needsRestack ? (
+          {layer.needsRestack && !merged ? (
             <Chip tone="warning" icon="Repeat">
               Needs restack
             </Chip>
@@ -657,14 +660,14 @@ function LayerPane({
                 </UrlLink>
               </Button>
             ) : null}
-            <Button size="sm" variant="outline" disabled={view.busyRepo} onClick={() => onOperation({ kind: "restack", branch: layer.name, scope: "upstack" })}>
+            {!merged ? <Button size="sm" variant="outline" disabled={view.busyRepo} onClick={() => onOperation({ kind: "restack", branch: layer.name, scope: "upstack" })}>
               <Icon name="Repeat" aria-hidden />
               Restack…
-            </Button>
-            <Button size="sm" variant="outline" disabled={view.busyRepo} onClick={() => onOperation({ kind: "submit", branch: layer.name, stack: false })}>
+            </Button> : null}
+            {!merged ? <Button size="sm" variant="outline" disabled={view.busyRepo} onClick={() => onOperation({ kind: "submit", branch: layer.name, stack: false })}>
               <Icon name="Sent" aria-hidden />
               Submit draft…
-            </Button>
+            </Button> : null}
             {pr && prUnavailable === null ? (
               <Button size="sm" onClick={() => setTab("comments")}>
                 Finish review
@@ -725,8 +728,8 @@ function LayerPane({
               {snapshot?.diverged ? (
                 <div className="gs-pad">
                   <Notice>
-                    {snapshot.parent} moved after this branch was stacked on it. The diff compares against the merge base. Restack to
-                    rebase on the current parent.
+                    {snapshot.parent} moved after this branch was stacked on it. The diff compares against the merge base.
+                    {!merged ? " Restack to rebase on the current parent." : " This PR is merged."}
                   </Notice>
                 </div>
               ) : null}

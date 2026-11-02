@@ -669,6 +669,35 @@ describe("operations", () => {
   });
 });
 
+describe("pull request status", () => {
+  it("shows a merged PR without actions for the merged branch", async () => {
+    const view = stackView();
+    view.layers = view.layers.map((item) => item.name === "feature/checkout-api" ? { ...item, needsRestack: true } : item);
+    const pr = { number: 7, title: "Add checkout API", url: "https://github.com/acme/app/pull/7", graphiteUrl: "https://app.graphite.com/github/pr/acme/app/7", state: "MERGED" as const, isDraft: false, reviewDecision: null, headRefName: "feature/checkout-api", headRefOid: SHA("b"), baseRefName: "feature/order-model", checks: "none" as const };
+    const slot = renderTab({ rpc: handlers({ stack: () => view, prs: () => ({ status: "ok", message: null, fetchedAt: Date.now(), stale: false, prs: { "feature/checkout-api": pr } }) }) });
+    expect(await slot.findByRole("link", { name: "Open in Graphite" })).toBeTruthy();
+    expect(slot.getAllByText("Merged").length).toBeGreaterThan(0);
+    expect(slot.queryByText("Needs restack")).toBeNull();
+    expect(slot.queryByRole("button", { name: "Submit draft…" })).toBeNull();
+    expect(slot.queryByRole("button", { name: "Restack…" })).toBeNull();
+  });
+
+  it("distinguishes a failed PR lookup from a local branch", async () => {
+    const slot = renderTab({ rpc: handlers({ prs: () => ({ status: "error", message: "GitHub request timed out", fetchedAt: null, stale: false, prs: {} }) }) });
+    expect(await slot.findByText("PR status unavailable")).toBeTruthy();
+    expect(slot.queryByText("Local branch")).toBeNull();
+  });
+
+  it("shows that PR status is loading", async () => {
+    const pending = deferred<Awaited<ReturnType<Handlers["prs"]>>>();
+    const slot = renderTab({ rpc: handlers({ prs: () => pending.promise }) });
+    expect(await slot.findByText("Checking PR…")).toBeTruthy();
+    expect(slot.queryByText("Local branch")).toBeNull();
+    await act(async () => pending.resolve({ status: "ok", message: null, fetchedAt: Date.now(), stale: false, prs: {} }));
+    expect(await slot.findByText("Local branch")).toBeTruthy();
+  });
+});
+
 describe("pull request writes", () => {
   it("disables a retry after an unknown reply outcome", async () => {
     const pr = {
