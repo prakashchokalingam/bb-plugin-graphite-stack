@@ -71,6 +71,14 @@ function NoteCard({
   const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [replyOpen, setReplyOpen] = useState(false);
+  const [expanded, setExpanded] = useState(!note.resolved);
+  const previousResolved = useRef(note.resolved);
+  useEffect(() => {
+    if (previousResolved.current !== note.resolved) {
+      previousResolved.current = note.resolved;
+      setExpanded(!note.resolved);
+    }
+  }, [note.resolved]);
   const replyRestored = useRef(false);
   useEffect(() => {
     if (replyDraft.loaded && !replyRestored.current) {
@@ -114,9 +122,20 @@ function NoteCard({
 
   const fromOtherRevision = currentHeadSha !== null && note.headSha !== currentHeadSha;
   if (deleting) return null;
+  if (note.resolved && !expanded) return (
+    <article className="gs-comment-collapsed" aria-label={`Comment on ${anchorLabel(note)}`}>
+      <button type="button" className="gs-comment-summary" aria-expanded="false" onClick={() => setExpanded(true)}>
+        <span aria-hidden="true">▸</span>
+        <span className="gs-resolved-label">✓ Resolved locally</span>
+        <span className="gs-comment-summary-status">{note.delivery ? note.delivery.status === "sent" ? "Sent to thread" : note.delivery.status === "queued" ? "Queued to thread" : "Send result unknown" : "Local draft"}</span>
+        {!inline ? <span className="gs-comment-summary-anchor" title={note.path}>{anchorLabel(note)}</span> : null}
+      </button>
+    </article>
+  );
   return (
     <article className={note.resolved ? "gs-comment gs-comment-resolved" : "gs-comment"} aria-label={`Comment on ${anchorLabel(note)}`}>
       <header className="gs-comment-head">
+        {note.resolved ? <button type="button" className="gs-comment-collapse" aria-label="Collapse resolved comment" aria-expanded="true" onClick={() => setExpanded(false)}>▾</button> : null}
         {onSelect && !note.resolved && !note.delivery ? <input type="checkbox" aria-label={`Select ${note.body}`} checked={selected} onChange={(event) => onSelect(note.id, event.target.checked)} /> : null}
         {note.delivery ? <Chip tone="brand">{note.delivery.status === "sent" ? "Sent to thread" : note.delivery.status === "queued" ? "Queued to thread" : "Send result unknown"}</Chip> : <Chip icon="Lock">Local draft</Chip>}
         {!inline ? <span className="min-w-0 truncate font-mono text-[11px]" title={note.path}>

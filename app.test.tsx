@@ -467,6 +467,22 @@ describe("line comments", () => {
     expect(slot.getByText(/Deselect those comments before sending/u)).toBeTruthy();
   });
 
+  it("collapses resolved comments and reopens them locally", async () => {
+    const anchor = { path: "src/checkout-api.ts", side: "new" as const, startLine: 2, endLine: 2, baseSha: SHA("a"), headSha: SHA("b") };
+    let note = { ...noteFrom({ environmentId: ENV, branch: "feature/checkout-api", anchor, body: "Why this change?", threadId: null }), delivery: { threadId: "thr_self", batchId: "batch_1", status: "sent" as const, hidden: false } };
+    const slot = renderTab({ rpc: handlers({ notesList: () => ({ notes: [note], snapshot: snapshotFor("feature/checkout-api", "feature/order-model"), truncated: false }), noteSetResolved: ({ resolved }) => { note = { ...note, resolved }; return { ok: true }; } }) });
+    const comment = await slot.findByRole("article", { name: /Comment on/u });
+    fireEvent.click(within(comment).getByRole("button", { name: "Resolve locally" }));
+    const summary = await slot.findByRole("button", { name: /Resolved locally.*Sent to thread/u });
+    expect(summary.getAttribute("aria-expanded")).toBe("false");
+    expect(slot.queryByText("Why this change?")).toBeNull();
+    fireEvent.click(summary);
+    expect(await slot.findByText("Why this change?")).toBeTruthy();
+    fireEvent.click(slot.getByRole("button", { name: "Reopen locally" }));
+    expect(await slot.findByRole("button", { name: "Resolve locally" })).toBeTruthy();
+    expect(calls(slot, "noteSetResolved").map((item) => item.resolved)).toEqual([true, false]);
+  });
+
   it("sends selected local drafts to the open thread with one click", async () => {
     const view = stackView();
     const anchor = { path: "src/checkout-api.ts", side: "new" as const, startLine: 2, endLine: 2, baseSha: SHA("a"), headSha: SHA("b") };
