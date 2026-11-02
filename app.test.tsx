@@ -463,9 +463,11 @@ describe("line comments", () => {
     fireEvent.click(await slot.findByRole("button", { name: "View comments" }));
     expect(await slot.findByText("Old comment")).toBeTruthy();
     expect(slot.getByText("Outdated")).toBeTruthy();
+    expect((slot.getByRole("button", { name: "Send to thread · 1" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(slot.getByText(/Deselect those comments before sending/u)).toBeTruthy();
   });
 
-  it("previews selected local drafts before sending one thread message", async () => {
+  it("sends selected local drafts to the open thread with one click", async () => {
     const view = stackView();
     const anchor = { path: "src/checkout-api.ts", side: "new" as const, startLine: 2, endLine: 2, baseSha: SHA("a"), headSha: SHA("b") };
     const note = noteFrom({ environmentId: ENV, branch: "feature/checkout-api", anchor, body: "Please check this", threadId: "thr_self" });
@@ -474,10 +476,8 @@ describe("line comments", () => {
     expect(slot.getAllByText("Please check this")).toHaveLength(1);
     expect(slot.getByText("Send to This thread")).toBeTruthy();
     expect((await slot.findByRole("checkbox", { name: /Please check this/u }) as HTMLInputElement).checked).toBe(true);
-    fireEvent.click(slot.getByRole("button", { name: "Review & send · 1" }));
-    expect(slot.getByText("Send to This thread")).toBeTruthy();
     expect(calls(slot, "notesSend")).toEqual([]);
-    fireEvent.click(slot.getByRole("button", { name: "Send 1 comment" }));
+    fireEvent.click(slot.getByRole("button", { name: "Send to thread · 1" }));
     await waitFor(() => expect(calls(slot, "notesSend")).toEqual([{ environmentId: ENV, branch: "feature/checkout-api", threadId: "thr_self", noteIds: ["note_1"] }]));
   });
 
@@ -492,10 +492,8 @@ describe("line comments", () => {
     const destination = await slot.findByRole("combobox", { name: "Send to" });
     fireEvent.change(destination, { target: { value: "thr_candidate" } });
     expect((slot.getByRole("checkbox", { name: /Select Page draft/u }) as HTMLInputElement).checked).toBe(true);
-    fireEvent.click(slot.getByRole("button", { name: "Review & send · 1" }));
-    expect(slot.getByText("Send to Build API")).toBeTruthy();
     expect(calls(slot, "notesSend")).toEqual([]);
-    fireEvent.click(slot.getByRole("button", { name: "Send 1 comment" }));
+    fireEvent.click(slot.getByRole("button", { name: "Send to thread · 1" }));
     await waitFor(() => expect(calls(slot, "notesSend")[0]?.threadId).toBe("thr_candidate"));
     expect(calls(slot, "linkThread")).toEqual([]);
   });

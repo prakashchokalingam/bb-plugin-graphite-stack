@@ -47,7 +47,7 @@ pull request exists.
   committed layer changes.
 - **Local line comments** on any layer, with replies, edit, local resolve,
   and delete. A comment keeps its original commit, path, side, and line range.
-  Changed lines show as outdated. Select local drafts to preview and send one
+  Changed lines show as outdated. Select local drafts to send one
   message to the open BB thread, or choose a thread on the stacks page. Sent, queued, and uncertain outcomes have
   separate labels. Local comments are not sent to GitHub.
 - **PR review** (only when the branch has a GitHub PR and `gh` is
